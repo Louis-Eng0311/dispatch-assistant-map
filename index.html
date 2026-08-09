@@ -465,9 +465,15 @@
     }
 
     function addrTokens_(value) {
-      var skip = { '경기': true, '경기도': true, '서울': true, '서울시': true, '서울특별시': true, '인천': true, '부산': true, '대구': true, '대전': true, '광주': true, '울산': true, '세종': true, '충북': true, '충남': true, '전북': true, '전남': true, '경북': true, '경남': true, '강원': true, '제주': true };
+      var skip = {
+        '경기': true, '경기도': true, '서울': true, '서울시': true, '서울특별시': true,
+        '인천': true, '부산': true, '대구': true, '대전': true, '광주': true, '울산': true, '세종': true,
+        '충북': true, '충청북도': true, '충남': true, '충청남도': true, '전북': true, '전라북도': true,
+        '전남': true, '전라남도': true, '경북': true, '경상북도': true, '경남': true, '경상남도': true,
+        '강원': true, '강원도': true, '강원특별자치도': true, '제주': true, '제주도': true, '제주특별자치도': true
+      };
       var out = [];
-      String(value || '').split(/[,\s()\/\-]+/).forEach(function (part) {
+      String(normalizeAddress_(value) || '').split(/[,\s()\/\-]+/).forEach(function (part) {
         var clean = part.replace(/[^\w가-힣]/g, '').replace(/(광역시|특별시|시|군|구|읍|면|동|리)$/g, '');
         if (!clean || clean.length < 2 || skip[clean]) return;
         clean = normText_(clean);
@@ -476,8 +482,71 @@
       return out;
     }
 
+    function normalizeAddress_(value) {
+      var s = String(value || '').trim().replace(/\s+/g, ' ');
+      if (!s) return '';
+      return s
+        .replace(/^(강원(?:특별자치도|도)?)(춘천|원주|강릉|동해|태백|속초|삼척|홍천|횡성|영월|평창|정선|철원|화천|양구|인제|고성|양양)/, '강원 $2')
+        .replace(/^(경기(?:도)?)(오산|용인|이천|수원|화성|평택|안성|성남|하남|의왕|광명|부천|시흥|안산|김포|고양|파주|남양주|구리|양주|여주|양평|포천|동두천|광주)/, '경기 $2')
+        .replace(/^(충북|충청북도)(청주|충주|제천|음성|진천|괴산|증평|보은|옥천|영동|단양)/, '충북 $2')
+        .replace(/^(충남|충청남도)(천안|아산|당진|서산|공주|논산|보령|계룡|금산|부여|서천|청양|홍성|예산|태안)/, '충남 $2');
+    }
+
     function candidateText_(doc) {
       return [doc.place_name, doc.address_name, doc.road_address_name].filter(Boolean).join(' ');
+    }
+
+    function candidateAddressText_(doc) {
+      return [doc.address_name, doc.road_address_name].filter(Boolean).join(' ');
+    }
+
+    var localityTokens_ = [
+      '춘천', '원주', '강릉', '속초', '홍천', '횡성', '평창', '정선',
+      '서울', '은평', '강남', '송파', '강서', '강동', '중산', '증산',
+      '인천', '부평', '남동', '서구', '연수',
+      '오산', '용인', '수원', '화성', '평택', '안성', '이천', '호법', '성남', '하남', '의왕', '광명', '부천', '시흥', '안산', '김포', '고양', '파주', '조리', '남양주', '구리', '양주', '여주', '양평', '포천', '동두천', '광주',
+      '청주', '충주', '제천', '음성', '삼성', '진천', '괴산', '증평',
+      '천안', '아산', '당진', '서산', '공주', '논산',
+      '대전', '세종',
+      '대구', '부산', '울산', '포항', '창원', '김해', '양산', '경주', '구미',
+      '전주', '익산', '군산', '목포', '여수', '순천', '광양',
+      '제주'
+    ];
+
+    function localityTokensFromText_(text) {
+      var s = String(text || '');
+      var found = [];
+      localityTokens_.forEach(function (token) {
+        if (s.indexOf(token) !== -1 && found.indexOf(token) === -1) found.push(token);
+      });
+      return found;
+    }
+
+    function hasLocalityConflict_(query, candidateAddressText) {
+      var qTokens = localityTokensFromText_(normalizeAddress_(query));
+      var cTokens = localityTokensFromText_(candidateAddressText);
+      if (!qTokens.length || !cTokens.length) return false;
+      for (var i = 0; i < qTokens.length; i++) {
+        if (cTokens.indexOf(qTokens[i]) !== -1) return false;
+      }
+      return true;
+    }
+
+    function regionGroupFromText_(text) {
+      var s = String(text || '');
+      if (/서울|경기|경기도|인천|오산|화성|수원|평택|안성|이천|용인|성남|하남|의왕|광명|부천|시흥|안산|김포|고양|파주|남양주|구리|양주|여주|양평|포천|동두천|은평|강남|부평|호법|양성|경기\s*광주|광주시/.test(s)) return 'capital';
+      if (/부산|울산|경남|경상남|대구|경북|경상북|포항|창원|김해|양산|경주|구미/.test(s)) return 'southeast';
+      if (/충북|충청북|충남|충청남|대전|세종|청주|천안|음성|진천|아산|당진/.test(s)) return 'central';
+      if (/전북|전라북|전남|전라남|광주광역|광주광역시|목포|여수|순천|전주|익산|군산/.test(s)) return 'southwest';
+      if (/강원|춘천|원주|강릉/.test(s)) return 'gangwon';
+      if (/제주/.test(s)) return 'jeju';
+      return '';
+    }
+
+    function hasHardRegionConflict_(query, candidateText) {
+      var qGroup = regionGroupFromText_(query);
+      var cGroup = regionGroupFromText_(candidateText);
+      return !!(qGroup && cGroup && qGroup !== cGroup);
     }
 
     function pickBestCandidate_(query, list) {
@@ -485,7 +554,10 @@
       var tokens = addrTokens_(query);
       var best = null;
       (list || []).forEach(function (doc) {
-        var c = normText_(candidateText_(doc));
+        var rawText = candidateText_(doc);
+        if (hasHardRegionConflict_(query, rawText)) return;
+        if (hasLocalityConflict_(query, candidateAddressText_(doc) || rawText)) return;
+        var c = normText_(rawText);
         var score = c.indexOf(q) !== -1 || q.indexOf(c) !== -1 ? 30 : 0;
         var matched = 0;
         tokens.forEach(function (token) {
@@ -494,6 +566,7 @@
             score += Math.min(token.length + 5, 12);
           }
         });
+        if (tokens.length && matched === 0) return;
         if (tokens.length >= 2 && matched < 2) score -= 18;
         if (!best || score > best.score) best = { doc: doc, score: score };
       });
@@ -502,6 +575,7 @@
 
     function geocodeAddress_(address, cb, onFail) {
       if (!address || !geocoder) return;
+      address = normalizeAddress_(address);
       if (geocodeCache[address]) { cb(geocodeCache[address]); return; }
 
       geocoder.addressSearch(address, function (result, status) {
@@ -684,6 +758,10 @@
 
     window.addEventListener('message', function (e) {
       if (e.data && e.data.type === 'CLEAR_PATH') {
+        clearRouteOverlays_();
+      }
+      if (e.data && e.data.type === 'CLEAR_ROUTE_STATE') {
+        clearRouteMarkersAndLabels_();
         clearRouteOverlays_();
       }
       if (e.data && e.data.type === 'SHOW_VALIDATED_ROUTE') {
