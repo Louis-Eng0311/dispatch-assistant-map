@@ -199,10 +199,6 @@
         <div class="ctrl-btn" id="catPK6" onclick="toggleCategory_('PK6')">🅿️ 주차장</div>
         <div class="ctrl-btn" id="catRest" onclick="toggleRestArea_()">🛣️ 휴게소</div>
       </div>
-      <div class="ctrl-divider"></div>
-      <div class="ctrl-row">
-        <div class="ctrl-btn safe active" id="wheelLockBtn" onclick="toggleWheelLock_()" title="기본값은 페이지 스크롤 보호입니다">🔒 휠 잠금</div>
-      </div>
     </div>
 
     <div id="empty">배차 건을 클릭하면 지도가 표시됩니다</div>
@@ -259,11 +255,17 @@
     }, { passive: false });
 
     function toggleWheelLock_() {
-      wheelLocked_ = !wheelLocked_;
+      setWheelLock_(!wheelLocked_);
+    }
+
+    function setWheelLock_(locked) {
+      wheelLocked_ = !!locked;
       if (map) map.setZoomable(!wheelLocked_);
       var btn = document.getElementById('wheelLockBtn');
-      btn.classList.toggle('active', wheelLocked_);
-      btn.textContent = wheelLocked_ ? '🔒 휠 잠금' : '🔓 지도 확대';
+      if (btn) {
+        btn.classList.toggle('active', wheelLocked_);
+        btn.textContent = wheelLocked_ ? '🔒 휠 잠금' : '🔓 지도 확대';
+      }
     }
 
     // ===== 검색 탭 전환 =====
@@ -763,6 +765,9 @@
       if (e.data && e.data.type === 'CLEAR_ROUTE_STATE') {
         clearRouteMarkersAndLabels_();
         clearRouteOverlays_();
+      }
+      if (e.data && e.data.type === 'SET_WHEEL_LOCK') {
+        setWheelLock_(e.data.locked);
       }
       if (e.data && e.data.type === 'SHOW_VALIDATED_ROUTE') {
         showValidatedRoute_(e.data);
