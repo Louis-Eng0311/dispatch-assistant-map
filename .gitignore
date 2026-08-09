@@ -1,0 +1,6 @@
+# Ignore everything by default so this repository stays map-only.
+*
+
+# Publish only the standalone Kakao map page and this allowlist.
+!index.html
+!.gitignore
