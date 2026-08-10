@@ -758,11 +758,45 @@
       map.setBounds(bounds);
     }
 
+    function showRoutePoints_(payload) {
+      if (!kakaoReady || !map || !payload) return;
+      document.getElementById('empty').style.display = 'none';
+      document.getElementById('splitWrap').style.display = 'flex';
+      map.relayout();
+
+      clearRouteMarkersAndLabels_();
+      clearRouteOverlays_();
+
+      var origin = payload.origin || {};
+      var destination = payload.destination || {};
+      var originPos = origin.lat && origin.lng ? new kakao.maps.LatLng(origin.lat, origin.lng) : null;
+      var destPos = destination.lat && destination.lng ? new kakao.maps.LatLng(destination.lat, destination.lng) : null;
+      var bounds = new kakao.maps.LatLngBounds();
+      if (originPos) {
+        markers.push(new kakao.maps.Marker({ map: map, position: originPos, title: '상차: ' + (origin.resolved || origin.searched || '') }));
+        addRouteLabel_(originPos, 'origin', '상차 ' + (origin.resolved || origin.searched || ''));
+        bounds.extend(originPos);
+      }
+      if (destPos) {
+        markers.push(new kakao.maps.Marker({ map: map, position: destPos, title: '하차: ' + (destination.resolved || destination.searched || '') }));
+        addRouteLabel_(destPos, 'destination', '하차 ' + (destination.resolved || destination.searched || ''));
+        bounds.extend(destPos);
+      }
+      if (originPos && destPos) {
+        addDirectionLabel_([originPos, destPos]);
+        map.setBounds(bounds);
+      } else if (originPos || destPos) {
+        map.setCenter(originPos || destPos);
+        map.setLevel(5);
+      }
+    }
+
     window.addEventListener('message', function (e) {
       if (e.data && e.data.type === 'CLEAR_PATH') {
         clearRouteOverlays_();
       }
       if (e.data && e.data.type === 'CLEAR_ROUTE_STATE') {
+        backToMap();
         clearRouteMarkersAndLabels_();
         clearRouteOverlays_();
       }
@@ -771,6 +805,9 @@
       }
       if (e.data && e.data.type === 'SHOW_VALIDATED_ROUTE') {
         showValidatedRoute_(e.data);
+      }
+      if (e.data && e.data.type === 'SHOW_ROUTE_POINTS') {
+        showRoutePoints_(e.data);
       }
       if (e.data && e.data.type === 'SHOW_ROUTE') {
         showRoute(e.data.origin, e.data.destination);
