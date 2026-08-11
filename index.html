@@ -253,6 +253,8 @@
     var currentTab_ = 'route';
     var routeSeq_ = 0;
     var wheelLocked_ = true;
+    var resolveSeq_ = 0;
+    var pendingResolve_ = {};
 
     var script = document.createElement('script');
     script.src = '//dapi.kakao.com/v2/maps/sdk.js?appkey=' + KAKAO_APP_KEY + '&libraries=services&autoload=false';
@@ -737,7 +739,69 @@
       };
     }
 
+    function hasParentResolver_() {
+      try { return !!(window.parent && window.parent !== window); } catch (e) { return false; }
+    }
+
+    function normalizeServerCandidate_(cand) {
+      cand = cand || {};
+      return {
+        title: cand.title || cand.placeName || cand.addressName || '',
+        addressName: cand.addressName || cand.rawText || cand.title || '',
+        roadAddressName: cand.roadAddressName || '',
+        source: cand.source || 'server',
+        variant: cand.variant || '',
+        lat: parseFloat(cand.lat),
+        lng: parseFloat(cand.lng),
+        score: Number(cand.score || 0),
+        matched: Number(cand.matched || cand.matchedTokens || 0),
+        confidence: cand.confidence || '중간',
+        conflict: !!cand.conflict,
+        autoOk: !!cand.autoOk,
+        rawText: cand.rawText || cand.addressName || cand.title || ''
+      };
+    }
+
+    function requestParentResolve_(query, cb, options, fallback) {
+      var requestId = 'resolve_' + (++resolveSeq_) + '_' + Date.now();
+      var settled = false;
+      pendingResolve_[requestId] = function (payload) {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        delete pendingResolve_[requestId];
+        var list = payload && payload.result && payload.result.candidates
+          ? payload.result.candidates.map(normalizeServerCandidate_).filter(function (cand) { return !isNaN(cand.lat) && !isNaN(cand.lng); })
+          : [];
+        if (list.length) cb(list);
+        else fallback();
+      };
+      var timer = setTimeout(function () {
+        if (settled) return;
+        settled = true;
+        delete pendingResolve_[requestId];
+        fallback();
+      }, 3600);
+      window.parent.postMessage({
+        type: 'REQUEST_RESOLVE',
+        requestId: requestId,
+        query: query,
+        options: { expand: !!(options && options.expand), limit: 10 }
+      }, '*');
+    }
+
     function resolveCandidates_(query, cb, options) {
+      options = options || {};
+      if (hasParentResolver_() && !options.localOnly) {
+        requestParentResolve_(query, cb, options, function () {
+          resolveCandidatesLocal_(query, cb, options);
+        });
+        return;
+      }
+      resolveCandidatesLocal_(query, cb, options);
+    }
+
+    function resolveCandidatesLocal_(query, cb, options) {
       if (!query || !geocoder || !places) { cb([]); return; }
       options = options || {};
       var normalized = normalizeAddress_(query);
@@ -1053,8 +1117,10 @@
             if (window.parent) {
               window.parent.postMessage({
                 type: 'REQUEST_ROUTE',
-                origin: originCand.addressName || origin,
-                destination: destCand.addressName || destination,
+                origin: origin,
+                destination: destination,
+                originCandidate: originCand,
+                destinationCandidate: destCand,
                 manual: !!options.manual
               }, '*');
             }
@@ -1164,10 +1230,15 @@
       }
     }
 
-    window.addEventListener('message', function (e) {
-      if (e.data && e.data.type === 'CLEAR_PATH') {
-        clearRouteOverlays_();
-      }
+	    window.addEventListener('message', function (e) {
+	      if (e.data && e.data.type === 'RESOLVE_RESULT') {
+	        var resolver = pendingResolve_[e.data.requestId || ''];
+	        if (resolver) resolver(e.data);
+	        return;
+	      }
+	      if (e.data && e.data.type === 'CLEAR_PATH') {
+	        clearRouteOverlays_();
+	      }
       if (e.data && e.data.type === 'CLEAR_ROUTE_STATE') {
         backToMap();
         clearRouteMarkersAndLabels_();
