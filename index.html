@@ -85,10 +85,10 @@
   }
   #resolveStatus.warn { display:flex; border-color:#F4B740; background:#FFF8E6; color:#7A4A00; }
   #resolveStatus.ok { display:flex; border-color:#98D8B7; background:#ECFDF3; color:#146C43; }
-	  #candidatePanel {
-	    display:none; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:7px;
-	    max-height: 190px; overflow:auto; margin-top:7px; padding-right:2px;
-	  }
+  #candidatePanel {
+    display:none; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:7px;
+    max-height: 128px; overflow:auto; margin-top:7px; padding-right:2px;
+  }
   .candidate-card {
     border:1px solid #D7E0EC; border-radius:10px; background:#FFFFFF; padding:8px;
     box-shadow:0 8px 18px rgba(26,39,64,.06); min-width:0;
@@ -931,20 +931,34 @@
     var activeCandidateQuery_ = '';
     var activeCandidateField_ = '';
     var candidateMarkers_ = [];
+    var CANDIDATE_LIMIT_ = 3;
+
+    function closeCandidatePanel_() {
+      activeCandidateList_ = [];
+      activeCandidateQuery_ = '';
+      activeCandidateField_ = '';
+      var panel = document.getElementById('candidatePanel');
+      if (panel) {
+        panel.style.display = 'none';
+        panel.innerHTML = '';
+      }
+      clearCandidateMarkers_();
+      setResolveStatus_('', '');
+    }
 
     function renderCandidatePanel_(query, candidates, fieldId) {
-      activeCandidateList_ = candidates || [];
+      var topCandidates = (candidates || []).slice(0, CANDIDATE_LIMIT_);
+      activeCandidateList_ = topCandidates;
       activeCandidateQuery_ = query || '';
       activeCandidateField_ = fieldId || '';
       var panel = document.getElementById('candidatePanel');
       if (!panel) return;
-      if (!candidates || !candidates.length) {
-        panel.style.display = 'none';
-        panel.innerHTML = '';
-        setResolveStatus_('warn', '검색 후보가 없습니다. 시/군/구 또는 상세주소를 조금 더 넣어주세요.');
+      if (!topCandidates.length) {
+        closeCandidatePanel_();
+        if (query) setResolveStatus_('warn', '검색 후보가 없습니다. 시/군/구 또는 상세주소를 조금 더 넣어주세요.');
         return;
       }
-      panel.innerHTML = candidates.slice(0, 6).map(function (cand, idx) {
+      panel.innerHTML = topCandidates.map(function (cand, idx) {
         var badge = cand.source === 'known_area' ? '지역' : (cand.source === 'address' ? '주소' : '장소');
         var title = cand.title || cand.addressName || '-';
         var addr = cand.roadAddressName || cand.addressName || cand.rawText || '-';
@@ -960,11 +974,11 @@
         '</div>';
       }).join('');
       panel.style.display = 'grid';
-      var best = bestCandidate_(query, candidates, true);
+      var best = bestCandidate_(query, topCandidates, true);
       setResolveStatus_(best ? 'ok' : 'warn',
         best
-          ? '후보 ' + candidates.length + '건 중 자동 선택 가능: ' + (best.roadAddressName || best.addressName || best.title)
-          : '자동 선택이 불안정합니다. 후보에서 정확한 상차/하차 위치를 눌러 확인하세요.'
+          ? '상위 후보 ' + topCandidates.length + '건 중 자동 선택 가능: ' + (best.roadAddressName || best.addressName || best.title)
+          : '상위 후보 ' + topCandidates.length + '건입니다. 정확한 상차/하차 위치를 눌러 확인하세요.'
       );
     }
 
@@ -975,7 +989,7 @@
       map.relayout();
       clearCandidateMarkers_();
       var bounds = new kakao.maps.LatLngBounds();
-      candidates.slice(0, 6).forEach(function (cand, idx) {
+      candidates.slice(0, CANDIDATE_LIMIT_).forEach(function (cand, idx) {
         var pos = candidatePos_(cand);
         var marker = new kakao.maps.Marker({ map: map, position: pos, title: cand.title || cand.addressName || '' });
         var iw = new kakao.maps.InfoWindow({
@@ -994,6 +1008,7 @@
       var cand = activeCandidateList_[idx];
       if (!cand || !kakaoReady) return;
       var value = cand.roadAddressName || cand.addressName || cand.title || activeCandidateQuery_;
+      closeCandidatePanel_();
       if (action === 'origin') {
         document.getElementById('originInput').value = value;
         switchTab_('route');
@@ -1313,7 +1328,7 @@
             return;
           }
           box.innerHTML = '';
-          result.slice(0, 5).forEach(function (place) {
+          result.slice(0, CANDIDATE_LIMIT_).forEach(function (place) {
             var item = document.createElement('div');
             item.className = 'suggest-item';
             item.innerHTML = '<div>' + escHtml_(place.title || place.addressName || '') + '</div><div class="addr">' + escHtml_(place.roadAddressName || place.addressName || '') + '</div>';
