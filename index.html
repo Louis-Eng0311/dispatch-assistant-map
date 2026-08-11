@@ -37,7 +37,7 @@
   #searchBarHeader:hover { color: #172033; }
   #searchBarToggleIcon { transition: transform .25s ease; display: inline-block; }
   #searchBarBody {
-    max-height: 310px; overflow: hidden; padding: 0 14px 10px;
+    max-height: 46vh; overflow: auto; padding: 0 14px 10px;
     transition: max-height .25s ease, padding .25s ease, opacity .2s ease;
     opacity: 1;
   }
@@ -86,24 +86,27 @@
   #resolveStatus.warn { display:flex; border-color:#F4B740; background:#FFF8E6; color:#7A4A00; }
   #resolveStatus.ok { display:flex; border-color:#98D8B7; background:#ECFDF3; color:#146C43; }
   #candidatePanel {
-    display:none; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:7px;
-    max-height: 128px; overflow:auto; margin-top:7px; padding-right:2px;
+    display:none; grid-template-columns: 1fr; gap:6px;
+    max-height: 178px; overflow:auto; margin-top:7px; padding-right:2px;
   }
   .candidate-card {
-    border:1px solid #D7E0EC; border-radius:10px; background:#FFFFFF; padding:8px;
-    box-shadow:0 8px 18px rgba(26,39,64,.06); min-width:0;
+    width:100%; border:1px solid #D7E0EC; border-radius:8px; background:#FFFFFF; padding:8px 9px;
+    box-shadow:0 8px 18px rgba(26,39,64,.06); min-width:0; cursor:pointer; text-align:left;
   }
+  .candidate-card:hover { border-color:#1F6FEB; background:#F8FBFF; }
   .candidate-card.warn { border-color:#F4B740; background:#FFFDF4; }
+  .candidate-card.blocked { border-color:#FCA5A5; background:#FFF5F5; }
   .candidate-card .c-top { display:flex; align-items:center; gap:6px; min-width:0; }
+  .candidate-card .c-no {
+    flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center;
+    width:20px; height:20px; border-radius:999px; background:#EAF2FF; color:#1F6FEB;
+    font-size:10px; font-weight:900;
+  }
   .candidate-card .c-title { flex:1; min-width:0; color:#152033; font-size:12px; font-weight:900; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .candidate-card .c-badge { flex-shrink:0; border-radius:999px; padding:2px 6px; background:#EAF2FF; color:#1F6FEB; font-size:9.5px; font-weight:900; }
-  .candidate-card .c-addr { color:#66758A; font-size:10.5px; line-height:1.35; margin-top:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .candidate-card .c-actions { display:flex; gap:4px; margin-top:7px; }
-  .candidate-card .c-actions button {
-    flex:1; min-width:0; padding:5px 4px; border-radius:7px; border:1px solid #D7E0EC;
-    background:#F4F7FB; color:#172033; font-size:10.5px; font-weight:800; cursor:pointer;
-  }
-  .candidate-card .c-actions button.primary { background:#1F6FEB; color:#FFFFFF; border-color:#1F6FEB; }
+  .candidate-card .c-addr { color:#66758A; font-size:10.5px; line-height:1.35; margin-top:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .candidate-card .c-foot { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:6px; color:#7C8AA0; font-size:10px; }
+  .candidate-card .c-action { color:#1F6FEB; font-weight:900; white-space:nowrap; }
 
   #rvBack {
     display: none; position: absolute; top: 50px; right: 8px; z-index: 20;
@@ -560,22 +563,60 @@
     }
 
     function candidateText_(doc) {
-      return [doc.place_name, doc.address_name, doc.road_address_name].filter(Boolean).join(' ');
+      var parts = [doc.place_name, doc.address_name, doc.road_address_name];
+      if (doc.address) {
+        parts.push(
+          doc.address.address_name,
+          doc.address.region_1depth_name,
+          doc.address.region_2depth_name,
+          doc.address.region_3depth_name
+        );
+      }
+      if (doc.road_address) {
+        parts.push(
+          doc.road_address.address_name,
+          doc.road_address.region_1depth_name,
+          doc.road_address.region_2depth_name,
+          doc.road_address.region_3depth_name,
+          doc.road_address.road_name,
+          doc.road_address.building_name
+        );
+      }
+      return parts.filter(Boolean).join(' ');
     }
 
     function candidateAddressText_(doc) {
-      return [doc.address_name, doc.road_address_name].filter(Boolean).join(' ');
+      var parts = [doc.address_name, doc.road_address_name];
+      if (doc.address) {
+        parts.push(
+          doc.address.address_name,
+          doc.address.region_1depth_name,
+          doc.address.region_2depth_name,
+          doc.address.region_3depth_name
+        );
+      }
+      if (doc.road_address) {
+        parts.push(
+          doc.road_address.address_name,
+          doc.road_address.region_1depth_name,
+          doc.road_address.region_2depth_name,
+          doc.road_address.region_3depth_name,
+          doc.road_address.road_name,
+          doc.road_address.building_name
+        );
+      }
+      return parts.filter(Boolean).join(' ');
     }
 
     var localityTokens_ = [
       '춘천', '원주', '강릉', '속초', '홍천', '횡성', '평창', '정선',
       '서울', '은평', '강남', '송파', '강서', '강동', '중산', '증산',
-      '인천', '부평', '남동', '서구', '연수',
-      '오산', '용인', '수원', '화성', '평택', '안성', '이천', '호법', '성남', '하남', '의왕', '광명', '부천', '시흥', '안산', '김포', '고양', '파주', '조리', '남양주', '구리', '양주', '여주', '양평', '포천', '동두천', '광주',
+      '인천', '부평', '남동', '서구', '연수', '북항', '북항로',
+      '오산', '가장', '용인', '처인', '수원', '화성', '정남', '평택', '안성', '이천', '장호원', '호법', '성남', '하남', '의왕', '광명', '부천', '시흥', '안산', '김포', '고양', '파주', '조리', '남양주', '구리', '양주', '여주', '양평', '포천', '동두천', '광주',
       '청주', '충주', '제천', '음성', '삼성', '진천', '괴산', '증평',
       '천안', '아산', '당진', '서산', '공주', '논산',
       '대전', '세종',
-      '대구', '부산', '울산', '포항', '창원', '김해', '양산', '경주', '구미',
+      '대구', '부산', '울산', '울주', '포항', '창원', '김해', '양산', '매곡', '경주', '구미', '김천',
       '전주', '익산', '군산', '목포', '여수', '순천', '광양',
       '제주'
     ];
@@ -589,20 +630,37 @@
       return found;
     }
 
+    var genericLocalityToken_ = {
+      '서구': true, '동구': true, '중구': true, '남구': true, '북구': true,
+      '강서': true, '강동': true, '광주': true
+    };
+
+    function meaningfulLocalityTokens_(tokens) {
+      return (tokens || []).filter(function (token) { return !genericLocalityToken_[token]; });
+    }
+
     function hasLocalityConflict_(query, candidateAddressText) {
       var qTokens = localityTokensFromText_(normalizeAddress_(query));
       var cTokens = localityTokensFromText_(candidateAddressText);
       if (!qTokens.length || !cTokens.length) return false;
+      var qStrong = meaningfulLocalityTokens_(qTokens);
+      var cStrong = meaningfulLocalityTokens_(cTokens);
+      if (qStrong.length && cStrong.length) {
+        for (var s = 0; s < qStrong.length; s++) {
+          if (cStrong.indexOf(qStrong[s]) !== -1) return false;
+        }
+        return true;
+      }
       for (var i = 0; i < qTokens.length; i++) {
         if (cTokens.indexOf(qTokens[i]) !== -1) return false;
       }
-      return true;
+      return qTokens.length >= 2 && cTokens.length >= 2;
     }
 
     function regionGroupFromText_(text) {
       var s = String(text || '');
-      if (/서울|경기|경기도|인천|오산|화성|수원|평택|안성|이천|용인|성남|하남|의왕|광명|부천|시흥|안산|김포|고양|파주|남양주|구리|양주|여주|양평|포천|동두천|은평|강남|부평|호법|양성|경기\s*광주|광주시/.test(s)) return 'capital';
-      if (/부산|울산|경남|경상남|대구|경북|경상북|포항|창원|김해|양산|경주|구미/.test(s)) return 'southeast';
+      if (/서울|경기|경기도|인천|오산|가장|화성|정남|수원|평택|안성|이천|장호원|용인|처인|성남|하남|의왕|광명|부천|시흥|안산|김포|고양|파주|남양주|구리|양주|여주|양평|포천|동두천|은평|강남|부평|북항|호법|양성|경기\s*광주|광주시/.test(s)) return 'capital';
+      if (/부산|울산|울주|경남|경상남|대구|경북|경상북|포항|창원|김해|양산|매곡|경주|구미|김천/.test(s)) return 'southeast';
       if (/충북|충청북|충남|충청남|대전|세종|청주|천안|음성|진천|아산|당진/.test(s)) return 'central';
       if (/전북|전라북|전남|전라남|광주광역|광주광역시|목포|여수|순천|전주|익산|군산/.test(s)) return 'southwest';
       if (/강원|춘천|원주|강릉/.test(s)) return 'gangwon';
@@ -669,7 +727,9 @@
       var s = normalizeAddress_(address);
       if (!isBroadMapQuery_(s)) return null;
       var rules = [
+        [/경기\s*용인\s*처인|용인\s*처인/, '경기 용인시 처인구', 37.2343, 127.2012],
         [/경기\s*용인|용인시?$/, '경기 용인시', 37.2411, 127.1776],
+        [/경남\s*양산\s*매곡|양산\s*매곡/, '경남 양산시 매곡동', 35.3753, 129.0609],
         [/서울\s*강남\s*논현|강남구?\s*논현|서울\s*논현/, '서울 강남구 논현동', 37.5115, 127.0285],
         [/서울\s*강남|강남구$/, '서울 강남구', 37.5172, 127.0473],
         [/인천\s*연수|연수구$/, '인천 연수구', 37.4103, 126.6782],
@@ -698,6 +758,8 @@
             matched: addrTokens_(s).length,
             confidence: '높음',
             conflict: false,
+            autoOk: true,
+            regionGroup: regionGroupFromText_(rules[i][1]),
             rawText: rules[i][1]
           };
         }
@@ -718,11 +780,11 @@
       var cNorm = normText_(text);
       var qNorm = normText_(variant || query);
       var tokens = addrTokens_(variant || query);
-      var score = source === 'address' ? 26 : 16;
+      var score = source === 'address_exact' ? 44 : (source === 'address' ? 30 : 16);
       var matched = 0;
       if (qNorm && cNorm) {
-        if (qNorm === cNorm) score += 40;
-        else if (cNorm.indexOf(qNorm) !== -1 || qNorm.indexOf(cNorm) !== -1) score += 24;
+        if (qNorm === cNorm) score += 42;
+        else if (cNorm.indexOf(qNorm) !== -1 || qNorm.indexOf(cNorm) !== -1) score += 28;
       }
       tokens.forEach(function (token) {
         if (cNorm.indexOf(token) !== -1) {
@@ -736,6 +798,12 @@
       if (localityConflict) score -= 55;
       if (tokens.length && matched === 0) score -= 20;
       if (tokens.length >= 2 && matched < 2) score -= 18;
+      var conflict = !!(hardConflict || localityConflict);
+      var autoOk = !conflict && (
+        (source === 'address_exact' && score >= 58 && (!tokens.length || matched >= Math.min(tokens.length, 2))) ||
+        (source === 'address' && score >= 64 && (!tokens.length || matched >= Math.min(tokens.length, 2))) ||
+        (source === 'keyword' && score >= 74 && matched >= Math.min(tokens.length, 2))
+      );
 
       return {
         title: doc.place_name || addressName || text,
@@ -748,7 +816,9 @@
         score: score,
         matched: matched,
         confidence: candidateConfidence_(score),
-        conflict: !!(hardConflict || localityConflict),
+        conflict: conflict,
+        autoOk: autoOk,
+        regionGroup: regionGroupFromText_(text),
         rawText: text
       };
     }
@@ -819,21 +889,17 @@
       if (!query || !geocoder || !places) { cb([]); return; }
       options = options || {};
       var normalized = normalizeAddress_(query);
-      var cacheKey = 'resolve_v2|' + (options.expand ? 'expand|' : 'fast|') + normalized;
+      var cacheKey = 'resolve_v3|' + (options.expand ? 'expand|' : 'fast|') + normalized;
       if (geocodeCache[cacheKey]) { cb(geocodeCache[cacheKey]); return; }
       var all = [];
       var seen = {};
       var known = knownAreaCandidate_(normalized);
-      if (known) {
-        geocodeCache[cacheKey] = [known];
-        cb([known]);
-        return;
-      }
+      if (known) addDocs([known], 'known_area', normalized, true);
       var variants = options.expand ? searchVariants_(query) : [normalized];
-      var pending = variants.length * 2;
-      function addDocs(docs, source, variant) {
+      var pending = variants.length * 3;
+      function addDocs(docs, source, variant, alreadyCandidate) {
         (docs || []).forEach(function (doc) {
-          var cand = docToCandidate_(normalized, doc, source, variant);
+          var cand = alreadyCandidate ? doc : docToCandidate_(normalized, doc, source, variant);
           if (!cand) return;
           var key = candidateKey_(cand);
           if (seen[key]) {
@@ -847,62 +913,55 @@
       function done() {
         pending -= 1;
         if (pending > 0) return;
-        all.sort(function (a, b) { return b.score - a.score; });
+        all.sort(function (a, b) {
+          if (!!a.autoOk !== !!b.autoOk) return a.autoOk ? -1 : 1;
+          return b.score - a.score;
+        });
         all = all.slice(0, 8);
         geocodeCache[cacheKey] = all;
         cb(all);
       }
       variants.forEach(function (variant) {
+        var exactOptions = { analyze_type: kakao.maps.services.AnalyzeType ? kakao.maps.services.AnalyzeType.EXACT : 'exact' };
+        var similarOptions = { analyze_type: kakao.maps.services.AnalyzeType ? kakao.maps.services.AnalyzeType.SIMILAR : 'similar' };
+        geocoder.addressSearch(variant, function (result, status) {
+          if (status === kakao.maps.services.Status.OK) addDocs(result, 'address_exact', variant);
+          done();
+        }, exactOptions);
         geocoder.addressSearch(variant, function (result, status) {
           if (status === kakao.maps.services.Status.OK) addDocs(result, 'address', variant);
           done();
-        });
+        }, similarOptions);
         places.keywordSearch(variant, function (result, status) {
           if (status === kakao.maps.services.Status.OK) addDocs(result, 'keyword', variant);
           done();
-        }, { size: 10 });
+        }, { size: 10, sort: kakao.maps.services.SortBy ? kakao.maps.services.SortBy.ACCURACY : 'accuracy' });
       });
     }
 
     function suggestCandidates_(query, cb) {
       if (!query || !places) { cb([]); return; }
       var normalized = normalizeAddress_(query);
-      var known = knownAreaCandidate_(normalized);
-      if (known) { cb([known]); return; }
-      places.keywordSearch(normalized, function (result, status) {
-        if (status !== kakao.maps.services.Status.OK) { cb([]); return; }
-        var seen = {};
-        var out = [];
-        (result || []).slice(0, 7).forEach(function (doc) {
-          var cand = docToCandidate_(normalized, doc, 'keyword', normalized);
-          if (!cand || cand.conflict) return;
-          var key = candidateKey_(cand);
-          if (seen[key]) return;
-          seen[key] = true;
-          out.push(cand);
-        });
-        out.sort(function (a, b) { return b.score - a.score; });
-        cb(out.slice(0, 5));
-      }, { size: 7 });
+      resolveCandidatesLocal_(normalized, function (result) {
+        cb((result || []).filter(function (cand) { return !cand.conflict; }).slice(0, 5));
+      }, { expand: true });
     }
 
-	    function bestCandidate_(query, candidates, strict) {
-	      var usable = (candidates || []).filter(function (cand) {
-	        if (cand.conflict) return false;
-	        if (strict && cand.autoOk === false) return false;
-	        if (strict && cand.confidence && cand.confidence !== '높음' && cand.score < 72) return false;
-	        if (strict && cand.score < 36) return false;
-	        return cand.score >= 20;
-	      });
-	      return usable[0] || null;
-	    }
+    function bestCandidate_(query, candidates, strict) {
+      var usable = (candidates || []).filter(function (cand) {
+        if (cand.conflict) return false;
+        if (strict && cand.autoOk !== true) return false;
+        if (!strict && cand.autoOk === false && Number(cand.score || 0) < 72) return false;
+        return cand.score >= 20;
+      });
+      return usable[0] || null;
+    }
 
-	    function routeCandidateNeedsChoice_(cand) {
-	      if (!cand) return true;
-	      if (cand.conflict) return true;
-	      if (cand.autoOk === false) return true;
-	      return cand.confidence && cand.confidence !== '높음' && cand.score < 72;
-	    }
+    function routeCandidateNeedsChoice_(cand) {
+      if (!cand) return true;
+      if (cand.conflict) return true;
+      return cand.autoOk !== true;
+    }
 
     function candidatePos_(cand) {
       return new kakao.maps.LatLng(cand.lat, cand.lng);
@@ -930,6 +989,7 @@
     var activeCandidateList_ = [];
     var activeCandidateQuery_ = '';
     var activeCandidateField_ = '';
+    var activeCandidateContext_ = {};
     var candidateMarkers_ = [];
     var CANDIDATE_LIMIT_ = 3;
 
@@ -937,6 +997,7 @@
       activeCandidateList_ = [];
       activeCandidateQuery_ = '';
       activeCandidateField_ = '';
+      activeCandidateContext_ = {};
       var panel = document.getElementById('candidatePanel');
       if (panel) {
         panel.style.display = 'none';
@@ -946,11 +1007,35 @@
       setResolveStatus_('', '');
     }
 
-    function renderCandidatePanel_(query, candidates, fieldId) {
+    function candidateSourceLabel_(source) {
+      if (source === 'known_area') return '지역';
+      if (source === 'address_exact') return '정확주소';
+      if (source === 'address') return '주소';
+      return '장소';
+    }
+
+    function candidateActionLabel_(fieldId, context) {
+      if (context && context.purpose === 'route-choice') return context.side === 'origin' ? '상차로 선택' : '하차로 선택';
+      if (fieldId === 'originInput') return '출발지 입력';
+      if (fieldId === 'destInput') return '도착지 입력';
+      if (fieldId === 'rvAddr' || fieldId === 'rvOrigin' || fieldId === 'rvDest') return '로드뷰';
+      return '지도 보기';
+    }
+
+    function routeOptionCopy_(options) {
+      var out = {};
+      options = options || {};
+      Object.keys(options).forEach(function (key) { out[key] = options[key]; });
+      out.routeKey = '';
+      return out;
+    }
+
+    function renderCandidatePanel_(query, candidates, fieldId, context) {
       var topCandidates = (candidates || []).slice(0, CANDIDATE_LIMIT_);
       activeCandidateList_ = topCandidates;
       activeCandidateQuery_ = query || '';
       activeCandidateField_ = fieldId || '';
+      activeCandidateContext_ = context || {};
       var panel = document.getElementById('candidatePanel');
       if (!panel) return;
       if (!topCandidates.length) {
@@ -959,19 +1044,16 @@
         return;
       }
       panel.innerHTML = topCandidates.map(function (cand, idx) {
-        var badge = cand.source === 'known_area' ? '지역' : (cand.source === 'address' ? '주소' : '장소');
+        var badge = candidateSourceLabel_(cand.source);
         var title = cand.title || cand.addressName || '-';
         var addr = cand.roadAddressName || cand.addressName || cand.rawText || '-';
-        return '<div class="candidate-card' + (cand.conflict || cand.confidence === '낮음' ? ' warn' : '') + '">' +
-          '<div class="c-top"><div class="c-title">' + escHtml_(title) + '</div><div class="c-badge">' + badge + ' ' + cand.confidence + '</div></div>' +
+        var cls = cand.conflict ? ' blocked' : (cand.confidence === '낮음' || cand.autoOk === false ? ' warn' : '');
+        var scoreText = cand.score ? '점수 ' + Math.round(Number(cand.score)) : '';
+        return '<button type="button" class="candidate-card' + cls + '" onclick="useCandidate_(' + idx + ',\'select\')">' +
+          '<div class="c-top"><span class="c-no">' + (idx + 1) + '</span><div class="c-title">' + escHtml_(title) + '</div><div class="c-badge">' + badge + ' ' + escHtml_(cand.confidence || '확인') + '</div></div>' +
           '<div class="c-addr">' + escHtml_(addr) + '</div>' +
-          '<div class="c-actions">' +
-            '<button class="primary" onclick="useCandidate_(' + idx + ',\'map\')">지도</button>' +
-            '<button onclick="useCandidate_(' + idx + ',\'roadview\')">로드뷰</button>' +
-	            '<button onclick="useCandidate_(' + idx + ',\'origin\')">출발지</button>' +
-	            '<button onclick="useCandidate_(' + idx + ',\'dest\')">도착지</button>' +
-          '</div>' +
-        '</div>';
+          '<div class="c-foot"><span>' + escHtml_(scoreText) + '</span><span class="c-action">' + escHtml_(candidateActionLabel_(fieldId, context)) + '</span></div>' +
+        '</button>';
       }).join('');
       panel.style.display = 'grid';
       var best = bestCandidate_(query, topCandidates, true);
@@ -1008,13 +1090,32 @@
       var cand = activeCandidateList_[idx];
       if (!cand || !kakaoReady) return;
       var value = cand.roadAddressName || cand.addressName || cand.title || activeCandidateQuery_;
+      var context = activeCandidateContext_ || {};
+      var fieldId = activeCandidateField_;
       closeCandidatePanel_();
-      if (action === 'origin') {
+      if (context.purpose === 'route-choice') {
+        var side = context.side === 'origin' ? 'origin' : 'destination';
+        var targetId = side === 'origin' ? 'originInput' : 'destInput';
+        var input = document.getElementById(targetId);
+        if (input) input.value = value;
+        var confirmed = context.confirmedCandidates || {};
+        confirmed[side] = cand;
+        var nextOptions = routeOptionCopy_(context.routeOptions || {});
+        nextOptions.manual = true;
+        nextOptions.confirmedCandidates = confirmed;
+        showRoute(
+          side === 'origin' ? value : (context.routeOrigin || document.getElementById('originInput').value.trim()),
+          side === 'destination' ? value : (context.routeDestination || document.getElementById('destInput').value.trim()),
+          nextOptions
+        );
+        return;
+      }
+      if (fieldId === 'originInput') {
         document.getElementById('originInput').value = value;
         switchTab_('route');
         return;
       }
-      if (action === 'dest') {
+      if (fieldId === 'destInput') {
         document.getElementById('destInput').value = value;
         switchTab_('route');
         return;
@@ -1030,24 +1131,29 @@
       candidateMarkers_.push(marker);
       map.setCenter(pos);
       map.setLevel(4);
-      if (action === 'roadview') goToRoadviewAt_(pos);
+      if (fieldId === 'rvAddr' || fieldId === 'rvOrigin' || fieldId === 'rvDest' || action === 'roadview') goToRoadviewAt_(pos);
     }
 
     function geocodeAddress_(address, cb, onFail, options) {
       if (!address || !geocoder || !places) return;
       options = options || {};
+      if (options.confirmedCandidate) {
+        cb(candidatePos_(options.confirmedCandidate), options.confirmedCandidate, [options.confirmedCandidate]);
+        return;
+      }
       var normalized = normalizeAddress_(address);
       resolveCandidates_(normalized, function (candidates) {
-        if (options.renderCandidates) {
-          renderCandidatePanel_(normalized, candidates, options.fieldId || '');
-          showCandidatesOnMap_(candidates);
-        }
         var best = bestCandidate_(normalized, candidates, !!options.strict);
         if (!best && !options.strict) best = (candidates || [])[0] || null;
         if (!best) {
+          if (options.renderCandidates) {
+            renderCandidatePanel_(normalized, candidates, options.fieldId || '');
+            showCandidatesOnMap_(candidates);
+          }
           if (onFail) onFail(candidates || []);
           return;
         }
+        if (options.renderCandidates) closeCandidatePanel_();
         cb(candidatePos_(best), best, candidates || []);
       }, { expand: !!options.expand });
     }
@@ -1120,6 +1226,7 @@
       if (!kakaoReady) return;
       options = options || {};
       var seq = ++routeSeq_;
+      var confirmed = options.confirmedCandidates || {};
       var originInput = document.getElementById('originInput');
       var destInput = document.getElementById('destInput');
       if (originInput) originInput.value = origin || '';
@@ -1158,7 +1265,14 @@
               var choiceQuery = originNeedsChoice ? origin : destination;
               var choiceField = originNeedsChoice ? 'originInput' : 'destInput';
               var choiceCandidates = originNeedsChoice ? originCandidates : destCandidates;
-              renderCandidatePanel_(choiceQuery, choiceCandidates || [], choiceField);
+              renderCandidatePanel_(choiceQuery, choiceCandidates || [], choiceField, {
+                purpose: 'route-choice',
+                side: originNeedsChoice ? 'origin' : 'destination',
+                routeOrigin: origin,
+                routeDestination: destination,
+                routeOptions: options,
+                confirmedCandidates: confirmed
+              });
               showCandidatesOnMap_(choiceCandidates || []);
               setResolveStatus_('warn', '검색 후보가 애매합니다. 아래 후보에서 정확한 위치를 출발지/도착지로 넣은 뒤 다시 경로를 눌러주세요.');
               if (window.parent) {
@@ -1203,7 +1317,14 @@
             }
           }, function (candidates) {
             if (seq !== routeSeq_) return;
-            renderCandidatePanel_(destination, candidates || [], 'destInput');
+            renderCandidatePanel_(destination, candidates || [], 'destInput', {
+              purpose: 'route-choice',
+              side: 'destination',
+              routeOrigin: origin,
+              routeDestination: destination,
+              routeOptions: options,
+              confirmedCandidates: confirmed
+            });
             showCandidatesOnMap_(candidates || []);
             if (window.parent) {
               window.parent.postMessage({
@@ -1216,11 +1337,18 @@
                 fromDashboardRecord: !!options.fromDashboardRecord
               }, '*');
             }
-          }, { strict: true, renderCandidates: true, fieldId: 'destInput', expand: !!(options.manual || options.expand) });
+          }, { strict: true, renderCandidates: true, fieldId: 'destInput', expand: !!(options.manual || options.expand), confirmedCandidate: confirmed.destination });
         }
       }, function (candidates) {
         if (seq !== routeSeq_) return;
-        renderCandidatePanel_(origin, candidates || [], 'originInput');
+        renderCandidatePanel_(origin, candidates || [], 'originInput', {
+          purpose: 'route-choice',
+          side: 'origin',
+          routeOrigin: origin,
+          routeDestination: destination,
+          routeOptions: options,
+          confirmedCandidates: confirmed
+        });
         showCandidatesOnMap_(candidates || []);
         if (window.parent) {
           window.parent.postMessage({
@@ -1233,7 +1361,7 @@
             fromDashboardRecord: !!options.fromDashboardRecord
           }, '*');
         }
-      }, { strict: true, renderCandidates: true, fieldId: 'originInput', expand: !!(options.manual || options.expand) });
+      }, { strict: true, renderCandidates: true, fieldId: 'originInput', expand: !!(options.manual || options.expand), confirmedCandidate: confirmed.origin });
     }
 
     // 부모창이 실제 카카오 길찾기 API로 계산해서 돌려준 진짜 도로 좌표로
