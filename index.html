@@ -85,10 +85,10 @@
   }
   #resolveStatus.warn { display:flex; border-color:#F4B740; background:#FFF8E6; color:#7A4A00; }
   #resolveStatus.ok { display:flex; border-color:#98D8B7; background:#ECFDF3; color:#146C43; }
-  #candidatePanel {
-    display:none; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:7px;
-    max-height: 138px; overflow:auto; margin-top:7px; padding-right:2px;
-  }
+	  #candidatePanel {
+	    display:none; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:7px;
+	    max-height: 190px; overflow:auto; margin-top:7px; padding-right:2px;
+	  }
   .candidate-card {
     border:1px solid #D7E0EC; border-radius:10px; background:#FFFFFF; padding:8px;
     box-shadow:0 8px 18px rgba(26,39,64,.06); min-width:0;
@@ -112,12 +112,19 @@
   }
 
   /* ===== 지도 컨트롤 패널 (접기/펼치기) ===== */
-  #ctrlToggle {
-    position: absolute; top: 8px; right: 8px; z-index: 15;
-    width: 34px; height: 34px; border-radius: 8px; border: 1px solid #C9D4E3;
-    background: rgba(255,255,255,.95); color: #172033; cursor: pointer; font-size: 15px;
-  }
-  #mapControls {
+	  #ctrlToggle {
+	    position: absolute; top: 8px; right: 8px; z-index: 15;
+	    width: 34px; height: 34px; border-radius: 8px; border: 1px solid #C9D4E3;
+	    background: rgba(255,255,255,.95); color: #172033; cursor: pointer; font-size: 15px;
+	  }
+	  #quickWheelLock {
+	    position:absolute; top:8px; right:50px; z-index:15;
+	    width:34px; height:34px; border-radius:8px; border:1px solid #C9D4E3;
+	    background:rgba(255,255,255,.95); color:#172033; cursor:pointer; font-size:15px;
+	    box-shadow:0 8px 18px rgba(20,31,52,.12);
+	  }
+	  #quickWheelLock.active { border-color:#1F6FEB; color:#1F6FEB; }
+	  #mapControls {
     display: none; position: absolute; top: 46px; right: 8px; z-index: 10;
     background: rgba(255,255,255,.96); border: 1px solid #C9D4E3; border-radius: 10px;
     padding: 6px; flex-direction: column; gap: 4px;
@@ -204,7 +211,8 @@
   <div id="mapArea">
     <button id="rvBack" onclick="backToMap()">✕ 로드뷰 닫기</button>
 
-    <button id="ctrlToggle" onclick="toggleControls_()">⚙️</button>
+	    <button id="quickWheelLock" class="active" onclick="toggleWheelLock_()" title="지도 휠 확대/축소 잠금">🔒</button>
+	    <button id="ctrlToggle" onclick="toggleControls_()">⚙️</button>
     <div id="mapControls">
       <div class="ctrl-row">
         <div class="ctrl-btn active" id="typeRoad" onclick="setMapType_('ROADMAP')">지도</div>
@@ -296,15 +304,21 @@
       setWheelLock_(!wheelLocked_);
     }
 
-    function setWheelLock_(locked) {
-      wheelLocked_ = !!locked;
-      if (map) map.setZoomable(!wheelLocked_);
-      var btn = document.getElementById('wheelLockBtn');
-      if (btn) {
-        btn.classList.toggle('active', wheelLocked_);
-        btn.textContent = wheelLocked_ ? '🔒 휠 잠금' : '🔓 지도 확대';
-      }
-    }
+	    function setWheelLock_(locked) {
+	      wheelLocked_ = !!locked;
+	      if (map) map.setZoomable(!wheelLocked_);
+	      var btn = document.getElementById('wheelLockBtn');
+	      if (btn) {
+	        btn.classList.toggle('active', wheelLocked_);
+	        btn.textContent = wheelLocked_ ? '🔒 휠 잠금' : '🔓 지도 확대';
+	      }
+	      var quick = document.getElementById('quickWheelLock');
+	      if (quick) {
+	        quick.classList.toggle('active', wheelLocked_);
+	        quick.textContent = wheelLocked_ ? '🔒' : '🔓';
+	        quick.title = wheelLocked_ ? '휠 잠금: 페이지 스크롤 우선' : '휠 해제: 지도 확대/축소';
+	      }
+	    }
 
     // ===== 검색 탭 전환 =====
     function switchTab_(tab) {
@@ -872,14 +886,23 @@
       }, { size: 7 });
     }
 
-    function bestCandidate_(query, candidates, strict) {
-      var usable = (candidates || []).filter(function (cand) {
-        if (cand.conflict) return false;
-        if (strict && cand.score < 36) return false;
-        return cand.score >= 20;
-      });
-      return usable[0] || null;
-    }
+	    function bestCandidate_(query, candidates, strict) {
+	      var usable = (candidates || []).filter(function (cand) {
+	        if (cand.conflict) return false;
+	        if (strict && cand.autoOk === false) return false;
+	        if (strict && cand.confidence && cand.confidence !== '높음' && cand.score < 72) return false;
+	        if (strict && cand.score < 36) return false;
+	        return cand.score >= 20;
+	      });
+	      return usable[0] || null;
+	    }
+
+	    function routeCandidateNeedsChoice_(cand) {
+	      if (!cand) return true;
+	      if (cand.conflict) return true;
+	      if (cand.autoOk === false) return true;
+	      return cand.confidence && cand.confidence !== '높음' && cand.score < 72;
+	    }
 
     function candidatePos_(cand) {
       return new kakao.maps.LatLng(cand.lat, cand.lng);
@@ -931,8 +954,8 @@
           '<div class="c-actions">' +
             '<button class="primary" onclick="useCandidate_(' + idx + ',\'map\')">지도</button>' +
             '<button onclick="useCandidate_(' + idx + ',\'roadview\')">로드뷰</button>' +
-            '<button onclick="useCandidate_(' + idx + ',\'origin\')">출발</button>' +
-            '<button onclick="useCandidate_(' + idx + ',\'dest\')">도착</button>' +
+	            '<button onclick="useCandidate_(' + idx + ',\'origin\')">출발지</button>' +
+	            '<button onclick="useCandidate_(' + idx + ',\'dest\')">도착지</button>' +
           '</div>' +
         '</div>';
       }).join('');
@@ -1095,21 +1118,25 @@
 
         if (destination) {
           geocodeAddress_(destination, function (destPos, destCand) {
-            if (seq !== routeSeq_) return;
-            clearCandidateMarkers_();
-            markers.push(new kakao.maps.Marker({ map: map, position: destPos, title: '도착: ' + (destCand.addressName || destination) }));
-            addRouteLabel_(destPos, 'destination', '하차 ' + (destCand.title || destCand.addressName || destination));
-            // ⚠️ 이건 실제 경로가 도착하기 전까지 잠깐 보여주는 임시 표시일 뿐입니다.
-            // 최종 결과는 반드시 showRealPath_()로 교체되어야 합니다 (아래 SHOW_PATH 참고).
-            polylines.push(new kakao.maps.Polyline({
-              map: map, path: [originPos, destPos], strokeWeight: 3,
-              strokeColor: '#1F6FEB', strokeOpacity: 0.55, strokeStyle: 'shortdash',
-              endArrow: true
-            }));
-            var bounds = new kakao.maps.LatLngBounds();
-            bounds.extend(originPos); bounds.extend(destPos);
-            map.setBounds(bounds);
-            setResolveStatus_('ok', '상차/하차 후보를 확인했습니다. 실제 도로 경로를 계산 중입니다.');
+	            if (seq !== routeSeq_) return;
+	            clearCandidateMarkers_();
+	            markers.push(new kakao.maps.Marker({ map: map, position: destPos, title: '도착: ' + (destCand.addressName || destination) }));
+	            addRouteLabel_(destPos, 'destination', '하차 ' + (destCand.title || destCand.addressName || destination));
+	            var bounds = new kakao.maps.LatLngBounds();
+	            bounds.extend(originPos); bounds.extend(destPos);
+	            map.setBounds(bounds);
+	            if (options.manual && (routeCandidateNeedsChoice_(originCand) || routeCandidateNeedsChoice_(destCand))) {
+	              setResolveStatus_('warn', '검색 후보가 애매합니다. 아래 후보에서 정확한 위치를 출발지/도착지로 넣은 뒤 다시 경로를 눌러주세요.');
+	              return;
+	            }
+	            // ⚠️ 이건 실제 경로가 도착하기 전까지 잠깐 보여주는 임시 표시일 뿐입니다.
+	            // 최종 결과는 반드시 showRealPath_()로 교체되어야 합니다 (아래 SHOW_PATH 참고).
+	            polylines.push(new kakao.maps.Polyline({
+	              map: map, path: [originPos, destPos], strokeWeight: 3,
+	              strokeColor: '#1F6FEB', strokeOpacity: 0.55, strokeStyle: 'shortdash',
+	              endArrow: true
+	            }));
+	            setResolveStatus_('ok', '상차/하차 후보를 확인했습니다. 경로를 요청합니다.');
 
             // 부모창(Dashboard.html)에게 실제 도로 경로 계산을 요청.
             // kakao-map.html은 REST 키가 없어서 길찾기 API를 직접 못 부르므로,
