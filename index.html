@@ -1068,6 +1068,13 @@
       clearRouteLabels_();
     }
 
+    function addRouteMarker_(pos, title) {
+      var marker = new kakao.maps.Marker({ map: map, position: pos, title: title || '' });
+      kakao.maps.event.addListener(marker, 'click', function () { goToRoadviewAt_(pos); });
+      markers.push(marker);
+      return marker;
+    }
+
     function addRouteLabel_(pos, type, text) {
       var div = document.createElement('div');
       div.className = 'route-label ' + type;
@@ -1113,45 +1120,70 @@
       if (!kakaoReady) return;
       options = options || {};
       var seq = ++routeSeq_;
+      var originInput = document.getElementById('originInput');
+      var destInput = document.getElementById('destInput');
+      if (originInput) originInput.value = origin || '';
+      if (destInput) destInput.value = destination || '';
       document.getElementById('empty').style.display = 'none';
       document.getElementById('splitWrap').style.display = 'flex';
       map.relayout();
 
       clearRouteMarkersAndLabels_();
       clearRouteOverlays_();
-      clearCandidateMarkers_();
+      closeCandidatePanel_();
 
-      geocodeAddress_(origin, function (originPos, originCand) {
+      geocodeAddress_(origin, function (originPos, originCand, originCandidates) {
         if (seq !== routeSeq_) return;
         map.relayout();
         clearCandidateMarkers_();
         lastOriginPos_ = originPos;
-        markers.push(new kakao.maps.Marker({ map: map, position: originPos, title: '출발: ' + (originCand.addressName || origin) }));
+        addRouteMarker_(originPos, '출발: ' + (originCand.addressName || origin));
         addRouteLabel_(originPos, 'origin', '상차 ' + (originCand.title || originCand.addressName || origin));
         map.setCenter(originPos);
         map.setLevel(7);
 
         if (destination) {
-          geocodeAddress_(destination, function (destPos, destCand) {
-	            if (seq !== routeSeq_) return;
-	            clearCandidateMarkers_();
-	            markers.push(new kakao.maps.Marker({ map: map, position: destPos, title: '도착: ' + (destCand.addressName || destination) }));
-	            addRouteLabel_(destPos, 'destination', '하차 ' + (destCand.title || destCand.addressName || destination));
-	            var bounds = new kakao.maps.LatLngBounds();
-	            bounds.extend(originPos); bounds.extend(destPos);
-	            map.setBounds(bounds);
-	            if (options.manual && (routeCandidateNeedsChoice_(originCand) || routeCandidateNeedsChoice_(destCand))) {
-	              setResolveStatus_('warn', '검색 후보가 애매합니다. 아래 후보에서 정확한 위치를 출발지/도착지로 넣은 뒤 다시 경로를 눌러주세요.');
-	              return;
-	            }
-	            // ⚠️ 이건 실제 경로가 도착하기 전까지 잠깐 보여주는 임시 표시일 뿐입니다.
-	            // 최종 결과는 반드시 showRealPath_()로 교체되어야 합니다 (아래 SHOW_PATH 참고).
-	            polylines.push(new kakao.maps.Polyline({
-	              map: map, path: [originPos, destPos], strokeWeight: 3,
-	              strokeColor: '#1F6FEB', strokeOpacity: 0.55, strokeStyle: 'shortdash',
-	              endArrow: true
-	            }));
-	            setResolveStatus_('ok', '상차/하차 후보를 확인했습니다. 경로를 요청합니다.');
+          geocodeAddress_(destination, function (destPos, destCand, destCandidates) {
+            if (seq !== routeSeq_) return;
+            clearCandidateMarkers_();
+            addRouteMarker_(destPos, '도착: ' + (destCand.addressName || destination));
+            addRouteLabel_(destPos, 'destination', '하차 ' + (destCand.title || destCand.addressName || destination));
+            var bounds = new kakao.maps.LatLngBounds();
+            bounds.extend(originPos); bounds.extend(destPos);
+            map.setBounds(bounds);
+
+            var originNeedsChoice = routeCandidateNeedsChoice_(originCand);
+            var destNeedsChoice = routeCandidateNeedsChoice_(destCand);
+            if (options.manual && (originNeedsChoice || destNeedsChoice)) {
+              var choiceQuery = originNeedsChoice ? origin : destination;
+              var choiceField = originNeedsChoice ? 'originInput' : 'destInput';
+              var choiceCandidates = originNeedsChoice ? originCandidates : destCandidates;
+              renderCandidatePanel_(choiceQuery, choiceCandidates || [], choiceField);
+              showCandidatesOnMap_(choiceCandidates || []);
+              setResolveStatus_('warn', '검색 후보가 애매합니다. 아래 후보에서 정확한 위치를 출발지/도착지로 넣은 뒤 다시 경로를 눌러주세요.');
+              if (window.parent) {
+                window.parent.postMessage({
+                  type: 'ROUTE_NEEDS_CANDIDATE_CHOICE',
+                  origin: origin,
+                  destination: destination,
+                  routeOwner: options.routeOwner || '',
+                  routeKey: options.routeKey || '',
+                  fromDashboardRecord: !!options.fromDashboardRecord
+                }, '*');
+              }
+              return;
+            }
+
+            closeCandidatePanel_();
+
+            // ⚠️ 이건 실제 경로가 도착하기 전까지 잠깐 보여주는 임시 표시일 뿐입니다.
+            // 최종 결과는 반드시 showRealPath_()로 교체되어야 합니다 (아래 SHOW_PATH 참고).
+            polylines.push(new kakao.maps.Polyline({
+              map: map, path: [originPos, destPos], strokeWeight: 3,
+              strokeColor: '#1F6FEB', strokeOpacity: 0.55, strokeStyle: 'shortdash',
+              endArrow: true
+            }));
+            setResolveStatus_('ok', '상차/하차 후보를 확인했습니다. 경로를 요청합니다.');
 
             // 부모창(Dashboard.html)에게 실제 도로 경로 계산을 요청.
             // kakao-map.html은 REST 키가 없어서 길찾기 API를 직접 못 부르므로,
@@ -1163,20 +1195,45 @@
                 destination: destination,
                 originCandidate: originCand,
                 destinationCandidate: destCand,
-                manual: !!options.manual
+                manual: !!options.manual,
+                routeOwner: options.routeOwner || '',
+                routeKey: options.routeKey || '',
+                fromDashboardRecord: !!options.fromDashboardRecord
               }, '*');
             }
           }, function (candidates) {
             if (seq !== routeSeq_) return;
             renderCandidatePanel_(destination, candidates || [], 'destInput');
             showCandidatesOnMap_(candidates || []);
-          }, { strict: true, renderCandidates: true, fieldId: 'destInput', expand: !!options.manual });
+            if (window.parent) {
+              window.parent.postMessage({
+                type: 'ROUTE_NEEDS_CANDIDATE_CHOICE',
+                origin: origin,
+                destination: destination,
+                missing: 'destination',
+                routeOwner: options.routeOwner || '',
+                routeKey: options.routeKey || '',
+                fromDashboardRecord: !!options.fromDashboardRecord
+              }, '*');
+            }
+          }, { strict: true, renderCandidates: true, fieldId: 'destInput', expand: !!(options.manual || options.expand) });
         }
       }, function (candidates) {
         if (seq !== routeSeq_) return;
         renderCandidatePanel_(origin, candidates || [], 'originInput');
         showCandidatesOnMap_(candidates || []);
-      }, { strict: true, renderCandidates: true, fieldId: 'originInput', expand: !!options.manual });
+        if (window.parent) {
+          window.parent.postMessage({
+            type: 'ROUTE_NEEDS_CANDIDATE_CHOICE',
+            origin: origin,
+            destination: destination,
+            missing: 'origin',
+            routeOwner: options.routeOwner || '',
+            routeKey: options.routeKey || '',
+            fromDashboardRecord: !!options.fromDashboardRecord
+          }, '*');
+        }
+      }, { strict: true, renderCandidates: true, fieldId: 'originInput', expand: !!(options.manual || options.expand) });
     }
 
     // 부모창이 실제 카카오 길찾기 API로 계산해서 돌려준 진짜 도로 좌표로
@@ -1213,12 +1270,12 @@
       var originPos = origin.lat && origin.lng ? new kakao.maps.LatLng(origin.lat, origin.lng) : null;
       var destPos = destination.lat && destination.lng ? new kakao.maps.LatLng(destination.lat, destination.lng) : null;
       if (originPos) {
-        markers.push(new kakao.maps.Marker({ map: map, position: originPos, title: '상차: ' + (origin.resolved || origin.searched || '') }));
+        addRouteMarker_(originPos, '상차: ' + (origin.resolved || origin.searched || ''));
         addRouteLabel_(originPos, 'origin', '상차 ' + (origin.resolved || origin.searched || ''));
         lastOriginPos_ = originPos;
       }
       if (destPos) {
-        markers.push(new kakao.maps.Marker({ map: map, position: destPos, title: '하차: ' + (destination.resolved || destination.searched || '') }));
+        addRouteMarker_(destPos, '하차: ' + (destination.resolved || destination.searched || ''));
         addRouteLabel_(destPos, 'destination', '하차 ' + (destination.resolved || destination.searched || ''));
       }
 
@@ -1252,12 +1309,12 @@
       var destPos = destination.lat && destination.lng ? new kakao.maps.LatLng(destination.lat, destination.lng) : null;
       var bounds = new kakao.maps.LatLngBounds();
       if (originPos) {
-        markers.push(new kakao.maps.Marker({ map: map, position: originPos, title: '상차: ' + (origin.resolved || origin.searched || '') }));
+        addRouteMarker_(originPos, '상차: ' + (origin.resolved || origin.searched || ''));
         addRouteLabel_(originPos, 'origin', '상차 ' + (origin.resolved || origin.searched || ''));
         bounds.extend(originPos);
       }
       if (destPos) {
-        markers.push(new kakao.maps.Marker({ map: map, position: destPos, title: '하차: ' + (destination.resolved || destination.searched || '') }));
+        addRouteMarker_(destPos, '하차: ' + (destination.resolved || destination.searched || ''));
         addRouteLabel_(destPos, 'destination', '하차 ' + (destination.resolved || destination.searched || ''));
         bounds.extend(destPos);
       }
@@ -1272,15 +1329,15 @@
       }
     }
 
-	    window.addEventListener('message', function (e) {
-	      if (e.data && e.data.type === 'RESOLVE_RESULT') {
-	        var resolver = pendingResolve_[e.data.requestId || ''];
-	        if (resolver) resolver(e.data);
-	        return;
-	      }
-	      if (e.data && e.data.type === 'CLEAR_PATH') {
-	        clearRouteOverlays_();
-	      }
+    window.addEventListener('message', function (e) {
+      if (e.data && e.data.type === 'RESOLVE_RESULT') {
+        var resolver = pendingResolve_[e.data.requestId || ''];
+        if (resolver) resolver(e.data);
+        return;
+      }
+      if (e.data && e.data.type === 'CLEAR_PATH') {
+        clearRouteOverlays_();
+      }
       if (e.data && e.data.type === 'CLEAR_ROUTE_STATE') {
         backToMap();
         clearRouteMarkersAndLabels_();
@@ -1299,7 +1356,14 @@
         showRoutePoints_(e.data);
       }
       if (e.data && e.data.type === 'SHOW_ROUTE') {
-        showRoute(e.data.origin, e.data.destination, { fromParent: true });
+        showRoute(e.data.origin, e.data.destination, {
+          fromParent: true,
+          manual: !!e.data.manual,
+          expand: !!e.data.expand,
+          routeOwner: e.data.routeOwner || '',
+          routeKey: e.data.routeKey || '',
+          fromDashboardRecord: !!e.data.fromDashboardRecord
+        });
       }
       if (e.data && e.data.type === 'SHOW_PATH') {
         showRealPath_(e.data.path);
