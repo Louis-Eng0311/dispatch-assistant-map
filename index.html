@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <style>
-  html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: #0B1220; overflow: hidden; }
+  html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: #F4F7FB; overflow: hidden; color:#152033; }
   * { box-sizing: border-box; font-family: -apple-system, 'Malgun Gothic', sans-serif; }
   #page { display: flex; flex-direction: column; height: 100%; }
   #mapArea { position: relative; flex: 1; min-height: 0; }
   #empty {
     display: flex; align-items: center; justify-content: center; height: 100%;
-    color: #7C8AA0; font-size: 13px; text-align: center; padding: 16px;
+    color: #66758A; font-size: 13px; text-align: center; padding: 16px;
   }
 
   /* ===== 지도/로드뷰 좌우 분할 레이아웃 =====
@@ -17,35 +17,36 @@
      로드뷰가 닫혀있을 땐 지도가 화면 전체를 씀. */
   #splitWrap { position: absolute; inset: 0; display: flex; }
   #map { flex: 1 1 100%; height: 100%; min-width: 0; }
-  #roadview { display: none; flex: 1 1 50%; height: 100%; min-width: 0; border-left: 2px solid #24314A; }
+  #roadview { display: none; flex: 1 1 50%; height: 100%; min-width: 0; border-left: 2px solid #C9D4E3; }
   #splitWrap.split-active #map { flex: 1 1 50%; }
   #splitWrap.split-active #roadview { display: block; }
 
   /* ===== 상단 검색 영역: 탭(경로검색 / 로드뷰검색) ===== */
   #searchBar {
     position: relative; z-index: 30; flex-shrink: 0;
-    background: rgba(15,24,38,.88); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-    border-bottom: 1px solid rgba(36,49,74,.8);
+    background: rgba(255,255,255,.92); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(194,205,222,.9);
+    box-shadow: 0 12px 30px rgba(26,39,64,.08);
   }
   #searchTabs { display: flex; gap: 4px; margin-bottom: 6px; }
   #searchBarHeader {
     display: flex; align-items: center; justify-content: space-between;
-    cursor: pointer; font-size: 11.5px; color: #7C8AA0; padding: 9px 14px;
+    cursor: pointer; font-size: 12px; color: #526176; padding: 9px 14px 7px;
     transition: color .15s ease;
   }
-  #searchBarHeader:hover { color: #E8EDF5; }
+  #searchBarHeader:hover { color: #172033; }
   #searchBarToggleIcon { transition: transform .25s ease; display: inline-block; }
   #searchBarBody {
-    max-height: 160px; overflow: hidden; padding: 0 14px 10px;
+    max-height: 310px; overflow: hidden; padding: 0 14px 10px;
     transition: max-height .25s ease, padding .25s ease, opacity .2s ease;
     opacity: 1;
   }
   #searchBarBody.collapsed { max-height: 0; padding-top: 0; padding-bottom: 0; opacity: 0; }
   .search-tab {
     font-size: 11px; padding: 5px 10px; border-radius: 6px; cursor: pointer;
-    background: #17233A; color: #7C8AA0; border: 1px solid #24314A;
+    background: #EEF3FA; color: #526176; border: 1px solid #D7E0EC;
   }
-  .search-tab.active { background: #F5A623; color: #1a1204; font-weight: 700; border-color: #F5A623; }
+  .search-tab.active { background: #1F6FEB; color: #FFFFFF; font-weight: 800; border-color: #1F6FEB; }
   .search-panel { display: none; }
   .search-panel.active { display: block; }
   .search-row { display: flex; gap: 6px; align-items: center; margin-bottom: 5px; position: relative; }
@@ -53,56 +54,83 @@
   .recent-row { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
   .recent-chip {
     font-size: 10.5px; padding: 4px 9px; border-radius: 999px; cursor: pointer;
-    background: #17233A; color: #7C8AA0; border: 1px solid #24314A; white-space: nowrap;
+    background: #F2F6FC; color: #526176; border: 1px solid #D7E0EC; white-space: nowrap;
   }
-  .recent-chip:hover { border-color: #F5A623; color: #E8EDF5; }
+  .recent-chip:hover { border-color: #1F6FEB; color: #172033; }
   .search-row input {
-    flex: 1; padding: 7px 10px; border-radius: 6px; border: 1px solid #24314A;
-    background: #121B2E; color: #E8EDF5; font-size: 12px;
+    flex: 1; min-width: 0; padding: 8px 10px; border-radius: 8px; border: 1px solid #C9D4E3;
+    background: #FFFFFF; color: #152033; font-size: 12px;
   }
   .search-row button {
-    padding: 7px 12px; border-radius: 6px; border: none; background: #F5A623;
-    color: #1a1204; font-weight: 700; font-size: 12px; cursor: pointer; white-space: nowrap;
+    padding: 8px 12px; border-radius: 8px; border: none; background: #1F6FEB;
+    color: #FFFFFF; font-weight: 800; font-size: 12px; cursor: pointer; white-space: nowrap;
   }
   .swap-btn {
-    padding: 6px 8px; border-radius: 6px; border: 1px solid #24314A; background: #17233A;
-    color: #7C8AA0; cursor: pointer; font-size: 12px;
+    padding: 7px 9px; border-radius: 8px; border: 1px solid #C9D4E3; background: #F2F6FC;
+    color: #526176; cursor: pointer; font-size: 12px;
   }
   #searchSuggest {
     display: none; position: absolute; top: 100%; left: 0; right: 0; margin-top: 4px;
-    background: #121B2E; border: 1px solid #24314A; border-radius: 8px; overflow: hidden; z-index: 40;
+    background: #FFFFFF; border: 1px solid #C9D4E3; border-radius: 10px; overflow: hidden; z-index: 40;
+    box-shadow: 0 18px 36px rgba(20,31,52,.14);
   }
-  .suggest-item { padding: 8px 10px; font-size: 11.5px; color: #E8EDF5; cursor: pointer; border-bottom: 1px solid #24314A; }
+  .suggest-item { padding: 8px 10px; font-size: 11.5px; color: #152033; cursor: pointer; border-bottom: 1px solid #E2E8F0; }
   .suggest-item:last-child { border-bottom: none; }
-  .suggest-item:hover { background: #17233A; }
-  .suggest-item .addr { color: #7C8AA0; font-size: 10.5px; margin-top: 2px; }
+  .suggest-item:hover { background: #F4F7FB; }
+  .suggest-item .addr { color: #66758A; font-size: 10.5px; margin-top: 2px; }
+  #resolveStatus {
+    display:none; align-items:center; gap:6px; margin:7px 0 0; padding:7px 9px;
+    border:1px solid #D7E0EC; border-radius:9px; background:#F7FAFE; color:#526176;
+    font-size:11px; line-height:1.35;
+  }
+  #resolveStatus.warn { display:flex; border-color:#F4B740; background:#FFF8E6; color:#7A4A00; }
+  #resolveStatus.ok { display:flex; border-color:#98D8B7; background:#ECFDF3; color:#146C43; }
+  #candidatePanel {
+    display:none; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:7px;
+    max-height: 138px; overflow:auto; margin-top:7px; padding-right:2px;
+  }
+  .candidate-card {
+    border:1px solid #D7E0EC; border-radius:10px; background:#FFFFFF; padding:8px;
+    box-shadow:0 8px 18px rgba(26,39,64,.06); min-width:0;
+  }
+  .candidate-card.warn { border-color:#F4B740; background:#FFFDF4; }
+  .candidate-card .c-top { display:flex; align-items:center; gap:6px; min-width:0; }
+  .candidate-card .c-title { flex:1; min-width:0; color:#152033; font-size:12px; font-weight:900; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .candidate-card .c-badge { flex-shrink:0; border-radius:999px; padding:2px 6px; background:#EAF2FF; color:#1F6FEB; font-size:9.5px; font-weight:900; }
+  .candidate-card .c-addr { color:#66758A; font-size:10.5px; line-height:1.35; margin-top:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .candidate-card .c-actions { display:flex; gap:4px; margin-top:7px; }
+  .candidate-card .c-actions button {
+    flex:1; min-width:0; padding:5px 4px; border-radius:7px; border:1px solid #D7E0EC;
+    background:#F4F7FB; color:#172033; font-size:10.5px; font-weight:800; cursor:pointer;
+  }
+  .candidate-card .c-actions button.primary { background:#1F6FEB; color:#FFFFFF; border-color:#1F6FEB; }
 
   #rvBack {
     display: none; position: absolute; top: 50px; right: 8px; z-index: 20;
-    padding: 7px 12px; border-radius: 6px; border: none; background: #17233A;
-    color: #E8EDF5; font-size: 12px; cursor: pointer;
+    padding: 7px 12px; border-radius: 6px; border: none; background: #152033;
+    color: #FFFFFF; font-size: 12px; cursor: pointer;
   }
 
   /* ===== 지도 컨트롤 패널 (접기/펼치기) ===== */
   #ctrlToggle {
     position: absolute; top: 8px; right: 8px; z-index: 15;
-    width: 34px; height: 34px; border-radius: 8px; border: 1px solid #24314A;
-    background: rgba(18,27,46,.95); color: #E8EDF5; cursor: pointer; font-size: 15px;
+    width: 34px; height: 34px; border-radius: 8px; border: 1px solid #C9D4E3;
+    background: rgba(255,255,255,.95); color: #172033; cursor: pointer; font-size: 15px;
   }
   #mapControls {
     display: none; position: absolute; top: 46px; right: 8px; z-index: 10;
-    background: rgba(18,27,46,.95); border: 1px solid #24314A; border-radius: 8px;
+    background: rgba(255,255,255,.96); border: 1px solid #C9D4E3; border-radius: 10px;
     padding: 6px; flex-direction: column; gap: 4px;
   }
   #mapControls.open { display: flex; }
   .ctrl-row { display: flex; gap: 3px; }
   .ctrl-btn {
-    font-size: 10.5px; padding: 5px 8px; border-radius: 5px; border: 1px solid #24314A;
-    background: #17233A; color: #7C8AA0; cursor: pointer; white-space: nowrap;
+    font-size: 10.5px; padding: 5px 8px; border-radius: 5px; border: 1px solid #D7E0EC;
+    background: #F2F6FC; color: #526176; cursor: pointer; white-space: nowrap;
   }
-  .ctrl-btn.active { background: #F5A623; color: #1a1204; border-color: #F5A623; font-weight: 700; }
-  .ctrl-btn.safe { background: rgba(61,220,151,.14); color: #3DDC97; border-color: rgba(61,220,151,.35); }
-  .ctrl-divider { height: 1px; background: #24314A; margin: 2px 0; }
+  .ctrl-btn.active { background: #1F6FEB; color: #FFFFFF; border-color: #1F6FEB; font-weight: 800; }
+  .ctrl-btn.safe { background: rgba(20,108,67,.11); color: #146C43; border-color: rgba(20,108,67,.28); }
+  .ctrl-divider { height: 1px; background: #E2E8F0; margin: 2px 0; }
   .route-label {
     padding: 5px 9px; border-radius: 999px; border: 1px solid rgba(255,255,255,.45);
     background: rgba(11,18,32,.92); color: #E8EDF5; font-size: 11px; font-weight: 800;
@@ -121,14 +149,14 @@
   <div id="page">
   <div id="searchBar">
     <div id="searchBarHeader" onclick="toggleSearchBar_()">
-      <span>🔍 경로·로드뷰 검색</span>
-      <span id="searchBarToggleIcon">▼</span>
+      <span>미니 카카오맵 · 주소/장소/경로/로드뷰</span>
+      <span id="searchBarToggleIcon">▲</span>
     </div>
-    <div id="searchBarBody" class="collapsed">
+    <div id="searchBarBody">
     <div id="searchTabs">
-      <div class="search-tab active" id="tabSingle" onclick="switchTab_('single')">🔍 장소 검색</div>
-      <div class="search-tab" id="tabRoute" onclick="switchTab_('route')">🚚 경로 검색</div>
-      <div class="search-tab" id="tabRoadview" onclick="switchTab_('roadview')">🚶 로드뷰 검색</div>
+      <div class="search-tab active" id="tabSingle" onclick="switchTab_('single')">장소</div>
+      <div class="search-tab" id="tabRoute" onclick="switchTab_('route')">경로</div>
+      <div class="search-tab" id="tabRoadview" onclick="switchTab_('roadview')">로드뷰</div>
     </div>
 
     <div class="search-panel active" id="panelSingle">
@@ -168,6 +196,8 @@
     </div>
 
     <div id="searchSuggest"></div>
+    <div id="resolveStatus"></div>
+    <div id="candidatePanel"></div>
     </div>
   </div>
 
@@ -181,6 +211,9 @@
         <div class="ctrl-btn" id="typeSky" onclick="setMapType_('SKYVIEW')">스카이뷰</div>
         <div class="ctrl-btn" id="typeHybrid" onclick="setMapType_('HYBRID')">하이브리드</div>
         <div class="ctrl-btn" id="typeRoadview" onclick="enterRoadviewFromMap_()">🚶 로드뷰</div>
+      </div>
+      <div class="ctrl-row">
+        <div class="ctrl-btn active" id="wheelLockBtn" onclick="toggleWheelLock_()" title="지도 휠 확대를 잠그고 페이지 스크롤을 우선합니다">휠 잠금</div>
       </div>
       <div class="ctrl-divider"></div>
       <div class="ctrl-row">
@@ -201,7 +234,7 @@
       </div>
     </div>
 
-    <div id="empty">배차 건을 클릭하면 지도가 표시됩니다</div>
+    <div id="empty">카카오맵을 준비하는 중입니다</div>
     <div id="splitWrap" style="display:none;">
       <div id="map"></div>
       <div id="roadview"></div>
@@ -232,6 +265,9 @@
           center: new kakao.maps.LatLng(36.5, 127.8), level: 9, scrollwheel: false
         });
         map.setZoomable(false);
+        document.getElementById('empty').style.display = 'none';
+        document.getElementById('splitWrap').style.display = 'flex';
+        map.relayout();
 
         // 지도를 클릭하면 그 지점으로 로드뷰를 바로 이동 (아래 4-6참고: 이제
         // 화면을 좌우로 나눠서 지도는 그대로 보이면서 로드뷰가 옆에 뜸)
@@ -292,6 +328,7 @@
         document.getElementById('empty').style.display = 'none';
         document.getElementById('splitWrap').style.display = 'flex';
         map.relayout();
+        clearCandidateMarkers_();
         markers.forEach(function (m) { m.setMap(null); });
         polylines.forEach(function (p) { p.setMap(null); });
         markers = []; polylines = [];
@@ -303,7 +340,7 @@
         map.setLevel(4);
       }, function () {
         alert('주소/장소를 찾을 수 없습니다. 정확한 지번·도로명 주소나 장소명을 입력해주세요.');
-      });
+      }, { renderCandidates: true, fieldId: 'singleInput', expand: true });
     }
 
     function swapOD_() {
@@ -491,7 +528,19 @@
         .replace(/^(강원(?:특별자치도|도)?)(춘천|원주|강릉|동해|태백|속초|삼척|홍천|횡성|영월|평창|정선|철원|화천|양구|인제|고성|양양)/, '강원 $2')
         .replace(/^(경기(?:도)?)(오산|용인|이천|수원|화성|평택|안성|성남|하남|의왕|광명|부천|시흥|안산|김포|고양|파주|남양주|구리|양주|여주|양평|포천|동두천|광주)/, '경기 $2')
         .replace(/^(충북|충청북도)(청주|충주|제천|음성|진천|괴산|증평|보은|옥천|영동|단양)/, '충북 $2')
-        .replace(/^(충남|충청남도)(천안|아산|당진|서산|공주|논산|보령|계룡|금산|부여|서천|청양|홍성|예산|태안)/, '충남 $2');
+        .replace(/^(충남|충청남도)(천안|아산|당진|서산|공주|논산|보령|계룡|금산|부여|서천|청양|홍성|예산|태안)/, '충남 $2')
+        .replace(/^(경북|경상북도)?\s*포항\s*북구/, '경북 포항 북구')
+        .replace(/^포항북구/, '경북 포항 북구')
+        .replace(/^오산\s*가장/, '경기 오산 가장동')
+        .replace(/^용인\s*/, '경기 용인 ')
+        .replace(/^파주\s*조리/, '경기 파주 조리읍')
+        .replace(/^파주시?\s*/, '경기 파주 ')
+        .replace(/^안성\s*양성/, '경기 안성 양성면')
+        .replace(/^이천\s*호법/, '경기 이천 호법면')
+        .replace(/^음성\s*삼성/, '충북 음성 삼성면')
+        .replace(/^춘천\s*/, '강원 춘천 ')
+        .replace(/^서구\s*북항/, '인천 서구 북항')
+        .replace(/^북항로/, '인천 서구 북항로');
     }
 
     function candidateText_(doc) {
@@ -551,54 +600,354 @@
       return !!(qGroup && cGroup && qGroup !== cGroup);
     }
 
-    function pickBestCandidate_(query, list) {
-      var q = normText_(query);
-      var tokens = addrTokens_(query);
-      var best = null;
-      (list || []).forEach(function (doc) {
-        var rawText = candidateText_(doc);
-        if (hasHardRegionConflict_(query, rawText)) return;
-        if (hasLocalityConflict_(query, candidateAddressText_(doc) || rawText)) return;
-        var c = normText_(rawText);
-        var score = c.indexOf(q) !== -1 || q.indexOf(c) !== -1 ? 30 : 0;
-        var matched = 0;
-        tokens.forEach(function (token) {
-          if (c.indexOf(token) !== -1) {
-            matched += 1;
-            score += Math.min(token.length + 5, 12);
-          }
-        });
-        if (tokens.length && matched === 0) return;
-        if (tokens.length >= 2 && matched < 2) score -= 18;
-        if (!best || score > best.score) best = { doc: doc, score: score };
-      });
-      return best && best.score >= (tokens.length >= 2 ? 10 : 0) ? best.doc : null;
+    function escHtml_(value) {
+      return String(value == null ? '' : value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
     }
 
-    function geocodeAddress_(address, cb, onFail) {
-      if (!address || !geocoder) return;
-      address = normalizeAddress_(address);
-      if (geocodeCache[address]) { cb(geocodeCache[address]); return; }
+    function searchVariants_(query) {
+      var base = normalizeAddress_(query);
+      var variants = [];
+      function add(v) {
+        v = normalizeAddress_(v);
+        if (v && variants.indexOf(v) === -1) variants.push(v);
+      }
+      add(base);
+      if (base.indexOf('/') !== -1) {
+        base.split('/').forEach(function (part) { add(part); });
+      }
+      var noParen = base.replace(/\([^)]*\)/g, ' ').replace(/\s+/g, ' ').trim();
+      add(noParen);
+      if (/^[가-힣]{2,6}\s/.test(base) && !regionGroupFromText_(base)) {
+        if (/파주|조리|고양|용인|오산|안성|이천|호법|양성/.test(base)) add('경기 ' + base);
+        if (/춘천|원주|강릉/.test(base)) add('강원 ' + base);
+        if (/음성|삼성|진천|청주/.test(base)) add('충북 ' + base);
+        if (/포항|김해|창원|양산|함안/.test(base)) add('경남 ' + base);
+      }
+      return variants.slice(0, 4);
+    }
 
-      geocoder.addressSearch(address, function (result, status) {
-        var bestAddress = status === kakao.maps.services.Status.OK ? pickBestCandidate_(address, result) : null;
-        if (bestAddress) {
-          var pos = new kakao.maps.LatLng(bestAddress.y, bestAddress.x);
-          geocodeCache[address] = pos;
-          cb(pos);
-          return;
+    function candidateKey_(cand) {
+      return [cand.addressName || cand.title || '', Number(cand.lat).toFixed(5), Number(cand.lng).toFixed(5)].join('|');
+    }
+
+    function candidateConfidence_(score) {
+      if (score >= 58) return '높음';
+      if (score >= 36) return '중간';
+      return '낮음';
+    }
+
+    function isBroadMapQuery_(address) {
+      var s = normalizeAddress_(address);
+      if (!s) return false;
+      if (/[0-9]/.test(s)) return false;
+      if (/(?:대로|번길|길|로)\s*\S+/.test(s) && s.length > 12) return false;
+      return s.length <= 18;
+    }
+
+    function knownAreaCandidate_(address) {
+      var s = normalizeAddress_(address);
+      if (!isBroadMapQuery_(s)) return null;
+      var rules = [
+        [/경기\s*용인|용인시?$/, '경기 용인시', 37.2411, 127.1776],
+        [/서울\s*강남\s*논현|강남구?\s*논현|서울\s*논현/, '서울 강남구 논현동', 37.5115, 127.0285],
+        [/서울\s*강남|강남구$/, '서울 강남구', 37.5172, 127.0473],
+        [/인천\s*연수|연수구$/, '인천 연수구', 37.4103, 126.6782],
+        [/인천\s*영종|영종도|영종/, '인천 중구 영종도', 37.4935, 126.4896],
+        [/경기\s*오산\s*가장|오산\s*가장/, '경기 오산시 가장동', 37.1719, 127.0546],
+        [/경기\s*화성\s*정남|화성\s*정남/, '경기 화성시 정남면', 37.1656, 126.9832],
+        [/경기\s*안성\s*양성|안성\s*양성/, '경기 안성시 양성면', 37.0587, 127.1948],
+        [/경기\s*파주\s*조리|파주\s*조리/, '경기 파주시 조리읍', 37.7442, 126.8072],
+        [/경기\s*이천\s*호법|이천\s*호법/, '경기 이천시 호법면', 37.2229, 127.4217],
+        [/충북\s*음성\s*삼성|음성\s*삼성/, '충북 음성군 삼성면', 37.0187, 127.4977],
+        [/경북\s*포항\s*북구|포항\s*북구|포항북구/, '경북 포항시 북구', 36.0719, 129.3763],
+        [/강원\s*춘천|춘천시?$/, '강원 춘천시', 37.8813, 127.7298],
+        [/인천\s*서구\s*북항|서구\s*북항|북항로/, '인천 서구 북항로', 37.4963, 126.6404]
+      ];
+      for (var i = 0; i < rules.length; i++) {
+        if (rules[i][0].test(s)) {
+          return {
+            title: rules[i][1],
+            addressName: rules[i][1],
+            roadAddressName: '',
+            source: 'known_area',
+            variant: s,
+            lat: rules[i][2],
+            lng: rules[i][3],
+            score: 88,
+            matched: addrTokens_(s).length,
+            confidence: '높음',
+            conflict: false,
+            rawText: rules[i][1]
+          };
         }
-        places.keywordSearch(address, function (kResult, kStatus) {
-          var bestKeyword = kStatus === kakao.maps.services.Status.OK ? pickBestCandidate_(address, kResult) : null;
-          if (bestKeyword) {
-            var pos2 = new kakao.maps.LatLng(bestKeyword.y, bestKeyword.x);
-            geocodeCache[address] = pos2;
-            cb(pos2);
-          } else if (onFail) {
-            onFail();
+      }
+      return null;
+    }
+
+    function docToCandidate_(query, doc, source, variant) {
+      var text = candidateText_(doc);
+      var addrText = candidateAddressText_(doc) || text;
+      var addressName = doc.road_address_name || doc.address_name || '';
+      if (!addressName && doc.road_address) addressName = doc.road_address.address_name || '';
+      if (!addressName && doc.address) addressName = doc.address.address_name || '';
+      var lat = parseFloat(doc.y);
+      var lng = parseFloat(doc.x);
+      if (isNaN(lat) || isNaN(lng)) return null;
+
+      var cNorm = normText_(text);
+      var qNorm = normText_(variant || query);
+      var tokens = addrTokens_(variant || query);
+      var score = source === 'address' ? 26 : 16;
+      var matched = 0;
+      if (qNorm && cNorm) {
+        if (qNorm === cNorm) score += 40;
+        else if (cNorm.indexOf(qNorm) !== -1 || qNorm.indexOf(cNorm) !== -1) score += 24;
+      }
+      tokens.forEach(function (token) {
+        if (cNorm.indexOf(token) !== -1) {
+          matched += 1;
+          score += Math.min(token.length + 6, 13);
+        }
+      });
+      var hardConflict = hasHardRegionConflict_(query, text);
+      var localityConflict = hasLocalityConflict_(query, addrText);
+      if (hardConflict) score -= 90;
+      if (localityConflict) score -= 55;
+      if (tokens.length && matched === 0) score -= 20;
+      if (tokens.length >= 2 && matched < 2) score -= 18;
+
+      return {
+        title: doc.place_name || addressName || text,
+        addressName: addressName || text,
+        roadAddressName: doc.road_address_name || '',
+        source: source,
+        variant: variant || query,
+        lat: lat,
+        lng: lng,
+        score: score,
+        matched: matched,
+        confidence: candidateConfidence_(score),
+        conflict: !!(hardConflict || localityConflict),
+        rawText: text
+      };
+    }
+
+    function resolveCandidates_(query, cb, options) {
+      if (!query || !geocoder || !places) { cb([]); return; }
+      options = options || {};
+      var normalized = normalizeAddress_(query);
+      var cacheKey = 'resolve_v2|' + (options.expand ? 'expand|' : 'fast|') + normalized;
+      if (geocodeCache[cacheKey]) { cb(geocodeCache[cacheKey]); return; }
+      var all = [];
+      var seen = {};
+      var known = knownAreaCandidate_(normalized);
+      if (known) {
+        geocodeCache[cacheKey] = [known];
+        cb([known]);
+        return;
+      }
+      var variants = options.expand ? searchVariants_(query) : [normalized];
+      var pending = variants.length * 2;
+      function addDocs(docs, source, variant) {
+        (docs || []).forEach(function (doc) {
+          var cand = docToCandidate_(normalized, doc, source, variant);
+          if (!cand) return;
+          var key = candidateKey_(cand);
+          if (seen[key]) {
+            if (cand.score > seen[key].score) Object.keys(cand).forEach(function (k) { seen[key][k] = cand[k]; });
+            return;
           }
+          seen[key] = cand;
+          all.push(cand);
+        });
+      }
+      function done() {
+        pending -= 1;
+        if (pending > 0) return;
+        all.sort(function (a, b) { return b.score - a.score; });
+        all = all.slice(0, 8);
+        geocodeCache[cacheKey] = all;
+        cb(all);
+      }
+      variants.forEach(function (variant) {
+        geocoder.addressSearch(variant, function (result, status) {
+          if (status === kakao.maps.services.Status.OK) addDocs(result, 'address', variant);
+          done();
+        });
+        places.keywordSearch(variant, function (result, status) {
+          if (status === kakao.maps.services.Status.OK) addDocs(result, 'keyword', variant);
+          done();
         }, { size: 10 });
       });
+    }
+
+    function suggestCandidates_(query, cb) {
+      if (!query || !places) { cb([]); return; }
+      var normalized = normalizeAddress_(query);
+      var known = knownAreaCandidate_(normalized);
+      if (known) { cb([known]); return; }
+      places.keywordSearch(normalized, function (result, status) {
+        if (status !== kakao.maps.services.Status.OK) { cb([]); return; }
+        var seen = {};
+        var out = [];
+        (result || []).slice(0, 7).forEach(function (doc) {
+          var cand = docToCandidate_(normalized, doc, 'keyword', normalized);
+          if (!cand || cand.conflict) return;
+          var key = candidateKey_(cand);
+          if (seen[key]) return;
+          seen[key] = true;
+          out.push(cand);
+        });
+        out.sort(function (a, b) { return b.score - a.score; });
+        cb(out.slice(0, 5));
+      }, { size: 7 });
+    }
+
+    function bestCandidate_(query, candidates, strict) {
+      var usable = (candidates || []).filter(function (cand) {
+        if (cand.conflict) return false;
+        if (strict && cand.score < 36) return false;
+        return cand.score >= 20;
+      });
+      return usable[0] || null;
+    }
+
+    function candidatePos_(cand) {
+      return new kakao.maps.LatLng(cand.lat, cand.lng);
+    }
+
+    function clearCandidateMarkers_() {
+      (candidateMarkers_ || []).forEach(function (m) { m.setMap(null); });
+      candidateMarkers_ = [];
+    }
+
+    function setResolveStatus_(type, text) {
+      var box = document.getElementById('resolveStatus');
+      if (!box) return;
+      if (!text) {
+        box.style.display = 'none';
+        box.className = '';
+        box.textContent = '';
+        return;
+      }
+      box.className = type || '';
+      box.textContent = text;
+      box.style.display = 'flex';
+    }
+
+    var activeCandidateList_ = [];
+    var activeCandidateQuery_ = '';
+    var activeCandidateField_ = '';
+    var candidateMarkers_ = [];
+
+    function renderCandidatePanel_(query, candidates, fieldId) {
+      activeCandidateList_ = candidates || [];
+      activeCandidateQuery_ = query || '';
+      activeCandidateField_ = fieldId || '';
+      var panel = document.getElementById('candidatePanel');
+      if (!panel) return;
+      if (!candidates || !candidates.length) {
+        panel.style.display = 'none';
+        panel.innerHTML = '';
+        setResolveStatus_('warn', '검색 후보가 없습니다. 시/군/구 또는 상세주소를 조금 더 넣어주세요.');
+        return;
+      }
+      panel.innerHTML = candidates.slice(0, 6).map(function (cand, idx) {
+        var badge = cand.source === 'known_area' ? '지역' : (cand.source === 'address' ? '주소' : '장소');
+        var title = cand.title || cand.addressName || '-';
+        var addr = cand.roadAddressName || cand.addressName || cand.rawText || '-';
+        return '<div class="candidate-card' + (cand.conflict || cand.confidence === '낮음' ? ' warn' : '') + '">' +
+          '<div class="c-top"><div class="c-title">' + escHtml_(title) + '</div><div class="c-badge">' + badge + ' ' + cand.confidence + '</div></div>' +
+          '<div class="c-addr">' + escHtml_(addr) + '</div>' +
+          '<div class="c-actions">' +
+            '<button class="primary" onclick="useCandidate_(' + idx + ',\'map\')">지도</button>' +
+            '<button onclick="useCandidate_(' + idx + ',\'roadview\')">로드뷰</button>' +
+            '<button onclick="useCandidate_(' + idx + ',\'origin\')">출발</button>' +
+            '<button onclick="useCandidate_(' + idx + ',\'dest\')">도착</button>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+      panel.style.display = 'grid';
+      var best = bestCandidate_(query, candidates, true);
+      setResolveStatus_(best ? 'ok' : 'warn',
+        best
+          ? '후보 ' + candidates.length + '건 중 자동 선택 가능: ' + (best.roadAddressName || best.addressName || best.title)
+          : '자동 선택이 불안정합니다. 후보에서 정확한 상차/하차 위치를 눌러 확인하세요.'
+      );
+    }
+
+    function showCandidatesOnMap_(candidates) {
+      if (!kakaoReady || !map || !candidates || !candidates.length) return;
+      document.getElementById('empty').style.display = 'none';
+      document.getElementById('splitWrap').style.display = 'flex';
+      map.relayout();
+      clearCandidateMarkers_();
+      var bounds = new kakao.maps.LatLngBounds();
+      candidates.slice(0, 6).forEach(function (cand, idx) {
+        var pos = candidatePos_(cand);
+        var marker = new kakao.maps.Marker({ map: map, position: pos, title: cand.title || cand.addressName || '' });
+        var iw = new kakao.maps.InfoWindow({
+          content: '<div style="padding:6px 8px;font-size:11px;line-height:1.35;color:#152033;"><b>' +
+            escHtml_(String(idx + 1) + '. ' + (cand.title || '후보')) + '</b><br>' +
+            escHtml_(cand.roadAddressName || cand.addressName || '') + '</div>'
+        });
+        kakao.maps.event.addListener(marker, 'click', function () { iw.open(map, marker); });
+        candidateMarkers_.push(marker);
+        bounds.extend(pos);
+      });
+      map.setBounds(bounds);
+    }
+
+    function useCandidate_(idx, action) {
+      var cand = activeCandidateList_[idx];
+      if (!cand || !kakaoReady) return;
+      var value = cand.roadAddressName || cand.addressName || cand.title || activeCandidateQuery_;
+      if (action === 'origin') {
+        document.getElementById('originInput').value = value;
+        switchTab_('route');
+        return;
+      }
+      if (action === 'dest') {
+        document.getElementById('destInput').value = value;
+        switchTab_('route');
+        return;
+      }
+      var pos = candidatePos_(cand);
+      document.getElementById('empty').style.display = 'none';
+      document.getElementById('splitWrap').style.display = 'flex';
+      map.relayout();
+      clearRouteMarkersAndLabels_();
+      clearRouteOverlays_();
+      clearCandidateMarkers_();
+      var marker = new kakao.maps.Marker({ map: map, position: pos, title: value });
+      candidateMarkers_.push(marker);
+      map.setCenter(pos);
+      map.setLevel(4);
+      if (action === 'roadview') goToRoadviewAt_(pos);
+    }
+
+    function geocodeAddress_(address, cb, onFail, options) {
+      if (!address || !geocoder || !places) return;
+      options = options || {};
+      var normalized = normalizeAddress_(address);
+      resolveCandidates_(normalized, function (candidates) {
+        if (options.renderCandidates) {
+          renderCandidatePanel_(normalized, candidates, options.fieldId || '');
+          showCandidatesOnMap_(candidates);
+        }
+        var best = bestCandidate_(normalized, candidates, !!options.strict);
+        if (!best && !options.strict) best = (candidates || [])[0] || null;
+        if (!best) {
+          if (onFail) onFail(candidates || []);
+          return;
+        }
+        cb(candidatePos_(best), best, candidates || []);
+      }, { expand: !!options.expand });
     }
 
     function clearRouteOverlays_() {
@@ -655,11 +1004,12 @@
       if (!origin || !destination) { alert('출발지와 도착지를 모두 입력해주세요.'); return; }
       recordRecentSearch_(origin);
       recordRecentSearch_(destination);
-      showRoute(origin, destination);
+      showRoute(origin, destination, { manual: true });
     }
 
-    function showRoute(origin, destination) {
+    function showRoute(origin, destination, options) {
       if (!kakaoReady) return;
+      options = options || {};
       var seq = ++routeSeq_;
       document.getElementById('empty').style.display = 'none';
       document.getElementById('splitWrap').style.display = 'flex';
@@ -667,39 +1017,58 @@
 
       clearRouteMarkersAndLabels_();
       clearRouteOverlays_();
+      clearCandidateMarkers_();
 
-      geocodeAddress_(origin, function (originPos) {
+      geocodeAddress_(origin, function (originPos, originCand) {
         if (seq !== routeSeq_) return;
         map.relayout();
+        clearCandidateMarkers_();
         lastOriginPos_ = originPos;
-        markers.push(new kakao.maps.Marker({ map: map, position: originPos }));
+        markers.push(new kakao.maps.Marker({ map: map, position: originPos, title: '출발: ' + (originCand.addressName || origin) }));
+        addRouteLabel_(originPos, 'origin', '상차 ' + (originCand.title || originCand.addressName || origin));
         map.setCenter(originPos);
         map.setLevel(7);
 
         if (destination) {
-          geocodeAddress_(destination, function (destPos) {
+          geocodeAddress_(destination, function (destPos, destCand) {
             if (seq !== routeSeq_) return;
-            markers.push(new kakao.maps.Marker({ map: map, position: destPos }));
+            clearCandidateMarkers_();
+            markers.push(new kakao.maps.Marker({ map: map, position: destPos, title: '도착: ' + (destCand.addressName || destination) }));
+            addRouteLabel_(destPos, 'destination', '하차 ' + (destCand.title || destCand.addressName || destination));
             // ⚠️ 이건 실제 경로가 도착하기 전까지 잠깐 보여주는 임시 표시일 뿐입니다.
             // 최종 결과는 반드시 showRealPath_()로 교체되어야 합니다 (아래 SHOW_PATH 참고).
             polylines.push(new kakao.maps.Polyline({
               map: map, path: [originPos, destPos], strokeWeight: 3,
-              strokeColor: '#00E5FF', strokeOpacity: 0.5, strokeStyle: 'shortdash',
+              strokeColor: '#1F6FEB', strokeOpacity: 0.55, strokeStyle: 'shortdash',
               endArrow: true
             }));
             var bounds = new kakao.maps.LatLngBounds();
             bounds.extend(originPos); bounds.extend(destPos);
             map.setBounds(bounds);
+            setResolveStatus_('ok', '상차/하차 후보를 확인했습니다. 실제 도로 경로를 계산 중입니다.');
 
             // 부모창(Dashboard.html)에게 실제 도로 경로 계산을 요청.
             // kakao-map.html은 REST 키가 없어서 길찾기 API를 직접 못 부르므로,
             // 반드시 이 다리를 거쳐야 진짜 도로선을 그릴 수 있음.
             if (window.parent) {
-              window.parent.postMessage({ type: 'REQUEST_ROUTE', origin: origin, destination: destination }, '*');
+              window.parent.postMessage({
+                type: 'REQUEST_ROUTE',
+                origin: originCand.addressName || origin,
+                destination: destCand.addressName || destination,
+                manual: !!options.manual
+              }, '*');
             }
-          });
+          }, function (candidates) {
+            if (seq !== routeSeq_) return;
+            renderCandidatePanel_(destination, candidates || [], 'destInput');
+            showCandidatesOnMap_(candidates || []);
+          }, { strict: true, renderCandidates: true, fieldId: 'destInput', expand: !!options.manual });
         }
-      });
+      }, function (candidates) {
+        if (seq !== routeSeq_) return;
+        renderCandidatePanel_(origin, candidates || [], 'originInput');
+        showCandidatesOnMap_(candidates || []);
+      }, { strict: true, renderCandidates: true, fieldId: 'originInput', expand: !!options.manual });
     }
 
     // 부모창이 실제 카카오 길찾기 API로 계산해서 돌려준 진짜 도로 좌표로
@@ -707,11 +1076,12 @@
     function showRealPath_(path) {
       if (!kakaoReady || !map || !path || path.length < 2) return;
       clearRouteOverlays_();
+      clearCandidateMarkers_();
 
       var kakaoPath = path.map(function (pt) { return new kakao.maps.LatLng(pt[0], pt[1]); });
       polylines.push(new kakao.maps.Polyline({
         map: map, path: kakaoPath, strokeWeight: 5,
-        strokeColor: '#00E5FF', strokeOpacity: 0.9, strokeStyle: 'solid',
+        strokeColor: '#1F6FEB', strokeOpacity: 0.88, strokeStyle: 'solid',
         endArrow: true
       }));
 
@@ -728,6 +1098,7 @@
 
       clearRouteMarkersAndLabels_();
       clearRouteOverlays_();
+      clearCandidateMarkers_();
 
       var origin = payload.origin || {};
       var destination = payload.destination || {};
@@ -746,7 +1117,7 @@
       var kakaoPath = payload.path.map(function (pt) { return new kakao.maps.LatLng(pt[0], pt[1]); });
       polylines.push(new kakao.maps.Polyline({
         map: map, path: kakaoPath, strokeWeight: 5,
-        strokeColor: '#38BDF8', strokeOpacity: 0.78, strokeStyle: 'solid',
+        strokeColor: '#1F6FEB', strokeOpacity: 0.88, strokeStyle: 'solid',
         endArrow: true
       }));
       addDirectionLabel_(kakaoPath);
@@ -785,9 +1156,11 @@
       if (originPos && destPos) {
         addDirectionLabel_([originPos, destPos]);
         map.setBounds(bounds);
+        setResolveStatus_('warn', payload.message || '상차/하차 위치는 표시했지만 실도로 경로는 보류되었습니다. 후보나 상세주소를 확인하세요.');
       } else if (originPos || destPos) {
         map.setCenter(originPos || destPos);
         map.setLevel(5);
+        setResolveStatus_('warn', payload.message || '한쪽 위치만 확인되었습니다. 나머지 주소를 더 자세히 입력하세요.');
       }
     }
 
@@ -799,6 +1172,9 @@
         backToMap();
         clearRouteMarkersAndLabels_();
         clearRouteOverlays_();
+        clearCandidateMarkers_();
+        renderCandidatePanel_('', [], '');
+        setResolveStatus_('', '');
       }
       if (e.data && e.data.type === 'SET_WHEEL_LOCK') {
         setWheelLock_(e.data.locked);
@@ -810,7 +1186,7 @@
         showRoutePoints_(e.data);
       }
       if (e.data && e.data.type === 'SHOW_ROUTE') {
-        showRoute(e.data.origin, e.data.destination);
+        showRoute(e.data.origin, e.data.destination, { fromParent: true });
       }
       if (e.data && e.data.type === 'SHOW_PATH') {
         showRealPath_(e.data.path);
@@ -833,8 +1209,8 @@
       if (!q || !kakaoReady) { box.style.display = 'none'; return; }
 
       searchDebounce_ = setTimeout(function () {
-        places.keywordSearch(q, function (result, status) {
-          if (status !== kakao.maps.services.Status.OK || !result.length) {
+        suggestCandidates_(q, function (result) {
+          if (!result || !result.length) {
             box.style.display = 'none';
             return;
           }
@@ -842,14 +1218,15 @@
           result.slice(0, 5).forEach(function (place) {
             var item = document.createElement('div');
             item.className = 'suggest-item';
-            item.innerHTML = '<div>' + place.place_name + '</div><div class="addr">' + (place.road_address_name || place.address_name || '') + '</div>';
+            item.innerHTML = '<div>' + escHtml_(place.title || place.addressName || '') + '</div><div class="addr">' + escHtml_(place.roadAddressName || place.addressName || '') + '</div>';
             item.onclick = function () {
-              document.getElementById(fieldId).value = place.place_name;
+              var selected = place.roadAddressName || place.addressName || place.title || q;
+              document.getElementById(fieldId).value = selected;
               box.style.display = 'none';
-              var pos = new kakao.maps.LatLng(place.y, place.x);
-              geocodeCache[place.place_name] = pos;
+              renderCandidatePanel_(q, result, fieldId);
+              var pos = candidatePos_(place);
               // 로드뷰 검색창이면 바로 로드뷰로 이동, 경로검색 칸이면 그냥 값만 채움
-              if (fieldId === 'rvAddr') { recordRecentSearch_(place.place_name); goToRoadviewAt_(pos); }
+              if (fieldId === 'rvAddr') { recordRecentSearch_(selected); goToRoadviewAt_(pos); }
             };
             box.appendChild(item);
           });
@@ -924,10 +1301,12 @@
       document.getElementById('empty').style.display = 'none';
       document.getElementById('splitWrap').style.display = 'flex';
       map.relayout();
+      clearCandidateMarkers_();
       markers.forEach(function (m) { m.setMap(null); });
       markers = [];
 
       geocodeAddress_(origin, function (pos) {
+        clearCandidateMarkers_();
         var marker = new kakao.maps.Marker({ map: map, position: pos, title: '상차지: ' + origin });
         kakao.maps.event.addListener(marker, 'click', function () { goToRoadviewAt_(pos); });
         markers.push(marker);
@@ -935,6 +1314,7 @@
         map.setLevel(6);
 
         geocodeAddress_(dest, function (pos2) {
+          clearCandidateMarkers_();
           var marker2 = new kakao.maps.Marker({ map: map, position: pos2, title: '하차지: ' + dest });
           kakao.maps.event.addListener(marker2, 'click', function () { goToRoadviewAt_(pos2); });
           markers.push(marker2);
@@ -942,8 +1322,15 @@
           bounds.extend(pos); bounds.extend(pos2);
           map.setBounds(bounds);
           alert('상차지·하차지 마커를 지도에 찍었습니다. 원하는 쪽 마커를 클릭하면 그 지점 로드뷰로 들어갑니다.');
-        }, function () { alert('하차지 주소를 찾을 수 없습니다.'); });
-      }, function () { alert('상차지 주소를 찾을 수 없습니다.'); });
+        }, function (candidates) {
+          renderCandidatePanel_(dest, candidates || [], 'rvDest');
+          showCandidatesOnMap_(candidates || []);
+          alert('하차지 주소 후보를 먼저 확인해주세요.');
+        }, { renderCandidates: true, fieldId: 'rvDest', expand: true });
+      }, function (candidates) {
+        renderCandidatePanel_(origin, candidates || [], 'rvOrigin');
+        alert('상차지 주소 후보를 먼저 확인해주세요.');
+      }, { renderCandidates: true, fieldId: 'rvOrigin', expand: true });
     }
 
     function showRoadview() {
@@ -956,8 +1343,8 @@
         recordRecentSearch_(addr);
         goToRoadviewAt_(pos);
       }, function () {
-        alert('주소/장소를 찾을 수 없습니다. 정확한 지번·도로명 주소나 장소명을 입력해주세요.');
-      });
+        alert('주소/장소 후보를 찾지 못했습니다. 시/군/구 또는 상세주소를 조금 더 넣어주세요.');
+      }, { renderCandidates: true, fieldId: 'rvAddr', expand: true });
     }
 
     function backToMap() {
