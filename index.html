@@ -51,12 +51,26 @@
   .search-panel.active { display: block; }
   .search-row { display: flex; gap: 6px; align-items: center; margin-bottom: 5px; position: relative; }
   .search-row:last-child { margin-bottom: 0; }
-  .recent-row { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+  .recent-row { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin-top: 8px; min-height: 24px; }
+  .recent-label { font-size:10px; color:#4A5A75; align-self:center; flex:0 0 auto; }
   .recent-chip {
-    font-size: 10.5px; padding: 4px 9px; border-radius: 999px; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 5px; max-width: 100%;
+    font-size: 10.5px; padding: 4px 5px 4px 9px; border-radius: 999px; cursor: pointer;
     background: #F2F6FC; color: #526176; border: 1px solid #D7E0EC; white-space: nowrap;
   }
   .recent-chip:hover { border-color: #1F6FEB; color: #172033; }
+  .recent-text { display:block; max-width: 168px; overflow:hidden; text-overflow:ellipsis; }
+  .recent-remove {
+    display:inline-flex; align-items:center; justify-content:center;
+    width:16px; height:16px; padding:0; border:0; border-radius:999px;
+    background:rgba(82,97,118,.12); color:#526176; font-size:12px; line-height:1; cursor:pointer;
+  }
+  .recent-remove:hover { background:#DCE6F4; color:#172033; }
+  .recent-clear {
+    padding:4px 8px; border-radius:999px; border:1px solid #D7E0EC;
+    background:#FFFFFF; color:#66758A; font-size:10px; cursor:pointer; white-space:nowrap;
+  }
+  .recent-clear:hover { border-color:#D33F49; color:#B4232D; background:#FFF6F6; }
   .search-row input {
     flex: 1; min-width: 0; padding: 8px 10px; border-radius: 8px; border: 1px solid #C9D4E3;
     background: #FFFFFF; color: #152033; font-size: 12px;
@@ -65,13 +79,16 @@
     padding: 8px 12px; border-radius: 8px; border: none; background: #1F6FEB;
     color: #FFFFFF; font-weight: 800; font-size: 12px; cursor: pointer; white-space: nowrap;
   }
+  #rvBothRow { display:none; }
+  #rvBothRow.open { display:flex; }
   .swap-btn {
     padding: 7px 9px; border-radius: 8px; border: 1px solid #C9D4E3; background: #F2F6FC;
     color: #526176; cursor: pointer; font-size: 12px;
   }
   #searchSuggest {
     display: none; position: absolute; top: 100%; left: 0; right: 0; margin-top: 4px;
-    background: #FFFFFF; border: 1px solid #C9D4E3; border-radius: 10px; overflow: hidden; z-index: 40;
+    background: #FFFFFF; border: 1px solid #C9D4E3; border-radius: 10px; overflow: auto; z-index: 40;
+    max-height: 168px;
     box-shadow: 0 18px 36px rgba(20,31,52,.14);
   }
   .suggest-item { padding: 8px 10px; font-size: 11.5px; color: #152033; cursor: pointer; border-bottom: 1px solid #E2E8F0; }
@@ -107,6 +124,15 @@
   .candidate-card .c-addr { color:#66758A; font-size:10.5px; line-height:1.35; margin-top:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .candidate-card .c-foot { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:6px; color:#7C8AA0; font-size:10px; }
   .candidate-card .c-action { color:#1F6FEB; font-weight:900; white-space:nowrap; }
+  .candidate-panel-head {
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    padding:1px 1px 2px; color:#526176; font-size:10.5px;
+  }
+  .candidate-close {
+    padding:3px 7px; border-radius:999px; border:1px solid #D7E0EC;
+    background:#FFFFFF; color:#66758A; font-size:10px; cursor:pointer;
+  }
+  .candidate-close:hover { border-color:#1F6FEB; color:#172033; }
 
   #rvBack {
     display: none; position: absolute; top: 50px; right: 8px; z-index: 20;
@@ -153,6 +179,21 @@
     background: rgba(11,18,32,.94); color: #F5A623; font-size: 12px; font-weight: 1000;
     box-shadow: 0 8px 18px rgba(0,0,0,.24); white-space: nowrap;
   }
+  @media (max-width: 520px) {
+    #searchBarBody { max-height: 55vh; padding: 0 10px 8px; }
+    #searchTabs { overflow-x: auto; }
+    .search-row { display:grid; grid-template-columns:minmax(0, 1fr); align-items:center; }
+    #panelRoute .search-row:first-child { grid-template-columns:minmax(0, 1fr); }
+    #panelRoute .search-row:nth-child(2) { grid-template-columns:auto minmax(0, 1fr); }
+    .search-row input { width:100%; min-width:0; }
+    .search-row button { width:100%; }
+    #panelRoute .search-row:nth-child(2) button { grid-column:1 / -1; }
+    #rvBothRow.open { display:grid; grid-template-columns:minmax(0, 1fr); }
+    .recent-text { max-width: 112px; }
+    .candidate-card .c-top { align-items:flex-start; flex-wrap:wrap; }
+    .candidate-card .c-title { white-space:normal; }
+    .candidate-card .c-addr { white-space:normal; }
+  }
 </style>
 </head>
 <body>
@@ -171,7 +212,7 @@
 
     <div class="search-panel active" id="panelSingle">
       <div class="search-row">
-        <input id="singleInput" placeholder="주소 또는 장소명 (예: 세방 부산물류센터)" oninput="onSearchInput_('singleInput')">
+        <input id="singleInput" placeholder="주소 또는 장소명 (예: 세방 부산물류센터)" oninput="onSearchInput_('singleInput')" onkeydown="handleSearchEnter_(event, 'single')">
         <button onclick="searchSingle_()">검색</button>
       </div>
       <div class="recent-row" id="recentRow_single"></div>
@@ -179,11 +220,11 @@
 
     <div class="search-panel" id="panelRoute">
       <div class="search-row">
-        <input id="originInput" placeholder="출발지 (주소 또는 장소명)" oninput="onSearchInput_('originInput')" onfocus="lastFocusedField_='originInput'">
+        <input id="originInput" placeholder="출발지 (주소 또는 장소명)" oninput="onSearchInput_('originInput')" onfocus="lastFocusedField_='originInput'" onkeydown="handleSearchEnter_(event, 'route')">
       </div>
       <div class="search-row">
         <div class="swap-btn" onclick="swapOD_()">⇅</div>
-        <input id="destInput" placeholder="도착지 (주소 또는 장소명)" oninput="onSearchInput_('destInput')" onfocus="lastFocusedField_='destInput'">
+        <input id="destInput" placeholder="도착지 (주소 또는 장소명)" oninput="onSearchInput_('destInput')" onfocus="lastFocusedField_='destInput'" onkeydown="handleSearchEnter_(event, 'route')">
         <button onclick="searchRoute_()">경로</button>
       </div>
       <div class="recent-row" id="recentRow_route"></div>
@@ -191,15 +232,15 @@
 
     <div class="search-panel" id="panelRoadview">
       <div class="search-row">
-        <input id="rvAddr" placeholder="상세주소 또는 장소명 (예: 인천공항, 서구 검암동 535-1)" oninput="onSearchInput_('rvAddr')">
+        <input id="rvAddr" placeholder="상세주소 또는 장소명 (예: 인천공항, 서구 검암동 535-1)" oninput="onSearchInput_('rvAddr')" onkeydown="handleSearchEnter_(event, 'roadview')">
         <button onclick="showRoadview()">로드뷰</button>
       </div>
       <div style="font-size:10.5px; color:#7C8AA0; margin:2px 0 6px; cursor:pointer;" onclick="toggleRvBothMode_()">
         <span id="rvBothToggleIcon">☐</span> 상차지·하차지 둘 다 찍어놓고 골라서 보기
       </div>
-      <div class="search-row" id="rvBothRow" style="display:none;">
-        <input id="rvOrigin" placeholder="상차지 상세주소">
-        <input id="rvDest" placeholder="하차지 상세주소">
+      <div class="search-row" id="rvBothRow">
+        <input id="rvOrigin" placeholder="상차지 상세주소" onkeydown="handleSearchEnter_(event, 'roadviewBoth')">
+        <input id="rvDest" placeholder="하차지 상세주소" onkeydown="handleSearchEnter_(event, 'roadviewBoth')">
         <button onclick="showRoadviewBoth_()">둘 다 표시</button>
       </div>
       <div class="recent-row" id="recentRow_roadview"></div>
@@ -333,6 +374,31 @@
       document.getElementById('panelRoute').classList.toggle('active', tab === 'route');
       document.getElementById('panelRoadview').classList.toggle('active', tab === 'roadview');
       document.getElementById('searchSuggest').style.display = 'none';
+      closeCandidatePanel_();
+    }
+
+    function handleSearchEnter_(event, mode) {
+      if (!event || event.key !== 'Enter') return;
+      event.preventDefault();
+      if (mode === 'single') searchSingle_();
+      else if (mode === 'route') searchRoute_();
+      else if (mode === 'roadview') showRoadview();
+      else if (mode === 'roadviewBoth') showRoadviewBoth_();
+    }
+
+    function showSingleMarker_(label, pos) {
+      document.getElementById('empty').style.display = 'none';
+      document.getElementById('splitWrap').style.display = 'flex';
+      map.relayout();
+      clearCandidateMarkers_();
+      clearRouteMarkersAndLabels_();
+      clearRouteOverlays_();
+
+      var marker = new kakao.maps.Marker({ map: map, position: pos, title: label });
+      kakao.maps.event.addListener(marker, 'click', function () { goToRoadviewAt_(pos); });
+      markers.push(marker);
+      map.setCenter(pos);
+      map.setLevel(4);
     }
 
     // ===== 장소 하나만 검색해서 지도에 마커로 표시 (가장 빠르고 단순한 검색) =====
@@ -344,21 +410,11 @@
 
       geocodeAddress_(q, function (pos) {
         recordRecentSearch_(q);
-        document.getElementById('empty').style.display = 'none';
-        document.getElementById('splitWrap').style.display = 'flex';
-        map.relayout();
-        clearCandidateMarkers_();
-        markers.forEach(function (m) { m.setMap(null); });
-        polylines.forEach(function (p) { p.setMap(null); });
-        markers = []; polylines = [];
-
-        var marker = new kakao.maps.Marker({ map: map, position: pos, title: q });
-        kakao.maps.event.addListener(marker, 'click', function () { goToRoadviewAt_(pos); });
-        markers.push(marker);
-        map.setCenter(pos);
-        map.setLevel(4);
-      }, function () {
-        alert('주소/장소를 찾을 수 없습니다. 정확한 지번·도로명 주소나 장소명을 입력해주세요.');
+        showSingleMarker_(q, pos);
+      }, function (candidates) {
+        if (!candidates || !candidates.length) {
+          alert('주소/장소를 찾을 수 없습니다. 정확한 지번·도로명 주소나 장소명을 입력해주세요.');
+        }
       }, { renderCandidates: true, fieldId: 'singleInput', expand: true });
     }
 
@@ -474,17 +530,44 @@
     // ===== 최근 검색어 5개 자동 기억 (브라우저에 저장, 세션 넘어서도 유지) =====
     var lastFocusedField_ = 'originInput';
     var RECENT_KEY_ = 'dash_recent_searches_v1';
+    var RECENT_LIMIT_ = 5;
+
+    function cleanRecentQuery_(query) {
+      return String(query || '').replace(/\s+/g, ' ').trim();
+    }
 
     function getRecentSearches_() {
-      try { return JSON.parse(localStorage.getItem(RECENT_KEY_)) || []; } catch (e) { return []; }
+      try {
+        var parsed = JSON.parse(localStorage.getItem(RECENT_KEY_)) || [];
+        if (!Array.isArray(parsed)) return [];
+        return parsed.map(cleanRecentQuery_).filter(Boolean).slice(0, RECENT_LIMIT_);
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function setRecentSearches_(list) {
+      list = (list || []).map(cleanRecentQuery_).filter(Boolean).slice(0, RECENT_LIMIT_);
+      try { localStorage.setItem(RECENT_KEY_, JSON.stringify(list)); } catch (e) {}
+      renderRecentChips_();
     }
 
     function recordRecentSearch_(query) {
+      query = cleanRecentQuery_(query);
       if (!query) return;
       var list = getRecentSearches_().filter(function (q) { return q !== query; });
       list.unshift(query);
-      list = list.slice(0, 5);
-      try { localStorage.setItem(RECENT_KEY_, JSON.stringify(list)); } catch (e) {}
+      setRecentSearches_(list);
+    }
+
+    function removeRecentSearch_(query) {
+      query = cleanRecentQuery_(query);
+      if (!query) return;
+      setRecentSearches_(getRecentSearches_().filter(function (q) { return q !== query; }));
+    }
+
+    function clearRecentSearches_() {
+      try { localStorage.removeItem(RECENT_KEY_); } catch (e) {}
       renderRecentChips_();
     }
 
@@ -494,14 +577,41 @@
         var box = document.getElementById('recentRow_' + panel);
         if (!box) return;
         if (list.length === 0) { box.innerHTML = ''; return; }
-        box.innerHTML = '<span style="font-size:10px;color:#4A5A75;align-self:center;">🕐 최근:</span>';
+        box.innerHTML = '';
+        var label = document.createElement('span');
+        label.className = 'recent-label';
+        label.textContent = '최근';
+        box.appendChild(label);
         list.forEach(function (q) {
           var chip = document.createElement('div');
           chip.className = 'recent-chip';
-          chip.textContent = q;
+          chip.title = q;
+          var text = document.createElement('span');
+          text.className = 'recent-text';
+          text.textContent = q;
+          var remove = document.createElement('button');
+          remove.type = 'button';
+          remove.className = 'recent-remove';
+          remove.textContent = '×';
+          remove.title = '최근 검색 삭제';
+          remove.onclick = function (event) {
+            event.stopPropagation();
+            removeRecentSearch_(q);
+          };
+          chip.appendChild(text);
+          chip.appendChild(remove);
           chip.onclick = function () { applyRecentSearch_(panel, q); };
           box.appendChild(chip);
         });
+        var clear = document.createElement('button');
+        clear.type = 'button';
+        clear.className = 'recent-clear';
+        clear.textContent = '전체삭제';
+        clear.onclick = function (event) {
+          event.stopPropagation();
+          clearRecentSearches_();
+        };
+        box.appendChild(clear);
       });
     }
 
@@ -513,7 +623,17 @@
         document.getElementById('singleInput').value = query;
         searchSingle_();
       } else {
-        document.getElementById(lastFocusedField_).value = query;
+        var origin = document.getElementById('originInput');
+        var dest = document.getElementById('destInput');
+        var targetId = lastFocusedField_ || 'originInput';
+        if (origin && !origin.value.trim()) targetId = 'originInput';
+        else if (dest && !dest.value.trim()) targetId = 'destInput';
+        var target = document.getElementById(targetId);
+        if (target) {
+          target.value = query;
+          target.focus();
+          lastFocusedField_ = targetId;
+        }
       }
     }
 
@@ -1044,7 +1164,7 @@
         if (query) setResolveStatus_('warn', '검색 후보가 없습니다. 시/군/구 또는 상세주소를 조금 더 넣어주세요.');
         return;
       }
-      panel.innerHTML = topCandidates.map(function (cand, idx) {
+      var cardsHtml = topCandidates.map(function (cand, idx) {
         var badge = candidateSourceLabel_(cand.source);
         var title = cand.title || cand.addressName || '-';
         var addr = cand.roadAddressName || cand.addressName || cand.rawText || '-';
@@ -1056,6 +1176,10 @@
           '<div class="c-foot"><span>' + escHtml_(scoreText) + '</span><span class="c-action">' + escHtml_(candidateActionLabel_(fieldId, context)) + '</span></div>' +
         '</button>';
       }).join('');
+      panel.innerHTML =
+        '<div class="candidate-panel-head"><span>유사 후보 ' + topCandidates.length + '건</span>' +
+        '<button type="button" class="candidate-close" onclick="closeCandidatePanel_()">닫기</button></div>' +
+        cardsHtml;
       panel.style.display = 'grid';
       var best = bestCandidate_(query, topCandidates, true);
       setResolveStatus_(best ? 'ok' : 'warn',
@@ -1512,7 +1636,11 @@
       activeSearchField_ = fieldId;
       var box = document.getElementById('searchSuggest');
       var q = document.getElementById(fieldId).value.trim();
-      if (!q || !kakaoReady) { box.style.display = 'none'; return; }
+      if (!q || !kakaoReady) {
+        box.style.display = 'none';
+        closeCandidatePanel_();
+        return;
+      }
 
       searchDebounce_ = setTimeout(function () {
         suggestCandidates_(q, function (result) {
@@ -1529,10 +1657,18 @@
               var selected = place.roadAddressName || place.addressName || place.title || q;
               document.getElementById(fieldId).value = selected;
               box.style.display = 'none';
-              renderCandidatePanel_(q, result, fieldId);
+              closeCandidatePanel_();
               var pos = candidatePos_(place);
-              // 로드뷰 검색창이면 바로 로드뷰로 이동, 경로검색 칸이면 그냥 값만 채움
-              if (fieldId === 'rvAddr') { recordRecentSearch_(selected); goToRoadviewAt_(pos); }
+              if (fieldId === 'singleInput') {
+                recordRecentSearch_(selected);
+                showSingleMarker_(selected, pos);
+              } else if (fieldId === 'rvAddr') {
+                recordRecentSearch_(selected);
+                goToRoadviewAt_(pos);
+              } else {
+                lastFocusedField_ = fieldId;
+                recordRecentSearch_(selected);
+              }
             };
             box.appendChild(item);
           });
@@ -1593,8 +1729,8 @@
     function toggleRvBothMode_() {
       var row = document.getElementById('rvBothRow');
       var icon = document.getElementById('rvBothToggleIcon');
-      var isOpen = row.style.display !== 'none';
-      row.style.display = isOpen ? 'none' : 'flex';
+      var isOpen = row.classList.contains('open');
+      row.classList.toggle('open', !isOpen);
       icon.textContent = isOpen ? '☐' : '☑';
     }
 
@@ -1648,8 +1784,10 @@
       geocodeAddress_(addr, function (pos) {
         recordRecentSearch_(addr);
         goToRoadviewAt_(pos);
-      }, function () {
-        alert('주소/장소 후보를 찾지 못했습니다. 시/군/구 또는 상세주소를 조금 더 넣어주세요.');
+      }, function (candidates) {
+        if (!candidates || !candidates.length) {
+          alert('주소/장소 후보를 찾지 못했습니다. 시/군/구 또는 상세주소를 조금 더 넣어주세요.');
+        }
       }, { renderCandidates: true, fieldId: 'rvAddr', expand: true });
     }
 
