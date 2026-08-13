@@ -200,7 +200,7 @@
   <div id="page">
   <div id="searchBar">
     <div id="searchBarHeader" onclick="toggleSearchBar_()">
-      <span>미니 카카오맵 · 주소/장소/경로/로드뷰</span>
+      <span>지도 검색 · 주소/장소/경로/로드뷰</span>
       <span id="searchBarToggleIcon">▲</span>
     </div>
     <div id="searchBarBody">
@@ -307,6 +307,19 @@
     var wheelLocked_ = true;
     var resolveSeq_ = 0;
     var pendingResolve_ = {};
+    var PARENT_MESSAGE_ORIGIN_ = (function () {
+      try { return document.referrer ? new URL(document.referrer).origin : '*'; }
+      catch (e) { return '*'; }
+    })();
+
+    function postParentMessage_(payload) {
+      if (!window.parent || window.parent === window) return;
+      window.parent.postMessage(payload, PARENT_MESSAGE_ORIGIN_);
+    }
+
+    function isTrustedParentMessage_(event) {
+      return PARENT_MESSAGE_ORIGIN_ === '*' || event.origin === PARENT_MESSAGE_ORIGIN_;
+    }
 
     var script = document.createElement('script');
     script.src = '//dapi.kakao.com/v2/maps/sdk.js?appkey=' + KAKAO_APP_KEY + '&libraries=services&autoload=false';
@@ -330,7 +343,7 @@
         });
 
         renderRecentChips_();
-        if (window.parent) window.parent.postMessage({ type: 'MAP_READY' }, '*');
+        postParentMessage_({ type: 'MAP_READY' });
       });
     };
     script.onerror = function () {
@@ -341,7 +354,7 @@
     window.addEventListener('wheel', function (e) {
       if (!wheelLocked_) return;
       e.preventDefault();
-      if (window.parent) window.parent.postMessage({ type: 'MAP_WHEEL', deltaY: e.deltaY }, '*');
+      postParentMessage_({ type: 'MAP_WHEEL', deltaY: e.deltaY });
     }, { passive: false });
 
     function toggleWheelLock_() {
@@ -987,12 +1000,12 @@
         delete pendingResolve_[requestId];
         fallback();
       }, 3600);
-      window.parent.postMessage({
+      postParentMessage_({
         type: 'REQUEST_RESOLVE',
         requestId: requestId,
         query: query,
         options: { expand: !!(options && options.expand), limit: 10 }
-      }, '*');
+      });
     }
 
     function resolveCandidates_(query, cb, options) {
@@ -1400,16 +1413,14 @@
               });
               showCandidatesOnMap_(choiceCandidates || []);
               setResolveStatus_('warn', '검색 후보가 애매합니다. 아래 후보에서 정확한 위치를 출발지/도착지로 넣은 뒤 다시 경로를 눌러주세요.');
-              if (window.parent) {
-                window.parent.postMessage({
-                  type: 'ROUTE_NEEDS_CANDIDATE_CHOICE',
-                  origin: origin,
-                  destination: destination,
-                  routeOwner: options.routeOwner || '',
-                  routeKey: options.routeKey || '',
-                  fromDashboardRecord: !!options.fromDashboardRecord
-                }, '*');
-              }
+              postParentMessage_({
+                type: 'ROUTE_NEEDS_CANDIDATE_CHOICE',
+                origin: origin,
+                destination: destination,
+                routeOwner: options.routeOwner || '',
+                routeKey: options.routeKey || '',
+                fromDashboardRecord: !!options.fromDashboardRecord
+              });
               return;
             }
 
@@ -1427,19 +1438,17 @@
             // 부모창(Dashboard.html)에게 실제 도로 경로 계산을 요청.
             // kakao-map.html은 REST 키가 없어서 길찾기 API를 직접 못 부르므로,
             // 반드시 이 다리를 거쳐야 진짜 도로선을 그릴 수 있음.
-            if (window.parent) {
-              window.parent.postMessage({
-                type: 'REQUEST_ROUTE',
-                origin: origin,
-                destination: destination,
-                originCandidate: originCand,
-                destinationCandidate: destCand,
-                manual: !!options.manual,
-                routeOwner: options.routeOwner || '',
-                routeKey: options.routeKey || '',
-                fromDashboardRecord: !!options.fromDashboardRecord
-              }, '*');
-            }
+            postParentMessage_({
+              type: 'REQUEST_ROUTE',
+              origin: origin,
+              destination: destination,
+              originCandidate: originCand,
+              destinationCandidate: destCand,
+              manual: !!options.manual,
+              routeOwner: options.routeOwner || '',
+              routeKey: options.routeKey || '',
+              fromDashboardRecord: !!options.fromDashboardRecord
+            });
           }, function (candidates) {
             if (seq !== routeSeq_) return;
             renderCandidatePanel_(destination, candidates || [], 'destInput', {
@@ -1451,17 +1460,15 @@
               confirmedCandidates: confirmed
             });
             showCandidatesOnMap_(candidates || []);
-            if (window.parent) {
-              window.parent.postMessage({
-                type: 'ROUTE_NEEDS_CANDIDATE_CHOICE',
-                origin: origin,
-                destination: destination,
-                missing: 'destination',
-                routeOwner: options.routeOwner || '',
-                routeKey: options.routeKey || '',
-                fromDashboardRecord: !!options.fromDashboardRecord
-              }, '*');
-            }
+            postParentMessage_({
+              type: 'ROUTE_NEEDS_CANDIDATE_CHOICE',
+              origin: origin,
+              destination: destination,
+              missing: 'destination',
+              routeOwner: options.routeOwner || '',
+              routeKey: options.routeKey || '',
+              fromDashboardRecord: !!options.fromDashboardRecord
+            });
           }, { strict: true, renderCandidates: true, fieldId: 'destInput', expand: !!(options.manual || options.expand), confirmedCandidate: confirmed.destination });
         }
       }, function (candidates) {
@@ -1475,17 +1482,15 @@
           confirmedCandidates: confirmed
         });
         showCandidatesOnMap_(candidates || []);
-        if (window.parent) {
-          window.parent.postMessage({
-            type: 'ROUTE_NEEDS_CANDIDATE_CHOICE',
-            origin: origin,
-            destination: destination,
-            missing: 'origin',
-            routeOwner: options.routeOwner || '',
-            routeKey: options.routeKey || '',
-            fromDashboardRecord: !!options.fromDashboardRecord
-          }, '*');
-        }
+        postParentMessage_({
+          type: 'ROUTE_NEEDS_CANDIDATE_CHOICE',
+          origin: origin,
+          destination: destination,
+          missing: 'origin',
+          routeOwner: options.routeOwner || '',
+          routeKey: options.routeKey || '',
+          fromDashboardRecord: !!options.fromDashboardRecord
+        });
       }, { strict: true, renderCandidates: true, fieldId: 'originInput', expand: !!(options.manual || options.expand), confirmedCandidate: confirmed.origin });
     }
 
@@ -1583,6 +1588,7 @@
     }
 
     window.addEventListener('message', function (e) {
+      if (!isTrustedParentMessage_(e)) return;
       if (e.data && e.data.type === 'RESOLVE_RESULT') {
         var resolver = pendingResolve_[e.data.requestId || ''];
         if (resolver) resolver(e.data);
